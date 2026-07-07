@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UB-Planungshilfe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f5f7; --surface: rgba(255,255,255,0.82); --surface-solid: #ffffff;
+  --glass: rgba(255,255,255,0.72); --glass-border: rgba(255,255,255,0.55);
+  --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.13);
+  --text: #1d1d1f; --text2: #6e6e73; --text3: #aeaeb2;
+  --blue: #0071e3; --blue-light: #147ce5; --blue-bg: rgba(0,113,227,0.09); --blue-glow: rgba(0,113,227,0.22);
+  --green: #34c759; --green-bg: rgba(52,199,89,0.1); --green-text: #1a7a3c;
+  --red: #ff3b30; --red-bg: rgba(255,59,48,0.09);
+  --amber: #ff9f0a; --amber-bg: rgba(255,159,10,0.1);
+  --purple: #af52de; --purple-bg: rgba(175,82,222,0.1);
+  --radius: 18px; --radius-sm: 12px; --radius-xs: 8px;
+  --shadow-sm: 0 2px 12px rgba(0,0,0,0.06); --shadow: 0 8px 32px rgba(0,0,0,0.1);
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+}
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); display: flex; height: 100vh; letter-spacing: -0.01em; }
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1;
+  background: radial-gradient(ellipse 80% 60% at 15% 10%, rgba(0,113,227,0.07) 0%, transparent 55%),
+              radial-gradient(ellipse 60% 55% at 85% 85%, rgba(175,82,222,0.055) 0%, transparent 55%), #f5f5f7;
+}
+/* SIDEBAR */
+.sidebar { width: 228px; flex-shrink: 0; height: 100vh; background: var(--glass); backdrop-filter: blur(28px) saturate(1.9); -webkit-backdrop-filter: blur(28px) saturate(1.9); border-right: 1px solid var(--glass-border); display: flex; flex-direction: column; box-shadow: 2px 0 20px rgba(0,0,0,0.04); }
+.sb-head { padding: 1.1rem 1.1rem 0.85rem; border-bottom: 1px solid var(--border); }
+.sb-logo { font-size: .69rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); margin-bottom: .18rem; }
+.sb-head h1 { font-size: .9rem; font-weight: 700; color: var(--text); }
+.sb-head p { font-size: .68rem; color: var(--text3); margin-top: .06rem; }
+.sb-list { flex: 1; overflow-y: auto; padding: .5rem .55rem; }
+.sb-list::-webkit-scrollbar { width: 3px; } .sb-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.sess { display: flex; align-items: center; gap: .4rem; padding: .48rem .65rem; border-radius: var(--radius-xs); cursor: pointer; margin-bottom: .1rem; min-width: 0; transition: background .15s, transform .15s; }
+.sess:hover { background: rgba(0,0,0,0.038); transform: translateX(2px); }
+.sess.active { background: var(--blue-bg); }
+.sess-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--text3); transition: all .25s; }
+.sess.active .sess-dot { background: var(--blue); box-shadow: 0 0 7px var(--blue-glow); }
+.sess.done .sess-dot { background: var(--green); }
+.sess-info { flex: 1; min-width: 0; }
+.sess-name { font-size: .79rem; font-weight: 500; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: text; display: block; }
+.sess.active .sess-name { color: var(--blue); font-weight: 600; }
+.sess-sub { font-size: .63rem; color: var(--text3); margin-top: .04rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sess-name-input { font-size: .79rem; font-weight: 500; color: var(--text); background: none; border: none; border-bottom: 1.5px solid var(--blue); outline: none; width: 100%; font-family: var(--font); padding: 0; }
+.sess-del { font-size: .7rem; color: var(--text3); background: none; border: none; cursor: pointer; padding: 2px 5px; border-radius: 4px; opacity: 0; transition: opacity .15s, background .12s; flex-shrink: 0; }
+.sess:hover .sess-del { opacity: 1; }
+.sess-del:hover { background: var(--red-bg); color: var(--red); }
+.btn-new { margin: .4rem .55rem .7rem; padding: .5rem .75rem; border: 1.5px dashed var(--border2); border-radius: var(--radius-xs); background: none; color: var(--text2); font-size: .78rem; font-family: var(--font); cursor: pointer; width: calc(100% - 1.1rem); text-align: left; transition: all .18s; display: flex; align-items: center; gap: .4rem; }
+.btn-new:hover { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+/* MAIN */
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow: hidden; }
+/* TOPBAR */
+.topbar { flex-shrink: 0; background: var(--glass); backdrop-filter: blur(22px) saturate(1.7); -webkit-backdrop-filter: blur(22px) saturate(1.7); border-bottom: 1px solid var(--glass-border); padding: .72rem 1.6rem .65rem; }
+.tb-meta { font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text3); margin-bottom: .22rem; }
+.tb-title { font-size: 1.02rem; font-weight: 700; color: var(--text); letter-spacing: -.02em; margin-bottom: .52rem; }
+.phase-dots { display: flex; align-items: center; gap: .28rem; }
+.pdot { width: 7px; height: 7px; border-radius: 50%; background: var(--border2); cursor: pointer; transition: all .28s cubic-bezier(.34,1.56,.64,1); position: relative; }
+.pdot:hover { transform: scale(1.5); }
+.pdot.done { background: var(--green); }
+.pdot.active { background: var(--blue); width: 24px; border-radius: 4px; box-shadow: 0 0 9px var(--blue-glow); }
+.pdot-label { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); font-size: .58rem; color: var(--text2); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s; background: var(--surface-solid); padding: 2px 6px; border-radius: 4px; box-shadow: var(--shadow-sm); z-index: 99; }
+.pdot:hover .pdot-label { opacity: 1; }
+.prog-wrap { height: 2px; background: var(--border); border-radius: 2px; margin-top: .48rem; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--blue), #5ac8fa); transition: width .65s cubic-bezier(.4,0,.2,1); box-shadow: 0 0 7px rgba(0,113,227,.4); }
+/* TABS */
+.tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 1.6rem; background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); flex-shrink: 0; }
+.tab { padding: .52rem .95rem; font-size: .81rem; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .2s; font-weight: 500; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+/* CONTENT */
+.content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.content::-webkit-scrollbar { width: 5px; } .content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+.pane { display: none; flex-direction: column; } .pane.active { display: flex; }
+/* SETUP */
+.setup-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 2.2rem 2rem 3rem; max-width: 700px; width: 100%; margin: 0 auto; }
+.s-eyebrow { font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--blue); margin-bottom: .32rem; text-align: center; }
+.s-title { font-size: 1.45rem; font-weight: 700; color: var(--text); letter-spacing: -.03em; margin-bottom: .28rem; text-align: center; }
+.s-sub { font-size: .87rem; color: var(--text2); text-align: center; margin-bottom: 1.85rem; line-height: 1.55; max-width: 460px; }
+.s-group { width: 100%; margin-bottom: 1.4rem; }
+.s-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-bottom: .5rem; display: block; }
+/* TYPE CARDS */
+.type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; width: 100%; }
+.type-card { background: var(--glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1.5px solid var(--glass-border); border-radius: var(--radius); padding: 1.15rem 1.1rem; cursor: pointer; transition: all .25s cubic-bezier(.34,1.26,.64,1); box-shadow: var(--shadow-sm); }
+.type-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: rgba(0,113,227,.3); }
+.type-card.sel { border-color: var(--blue); background: var(--blue-bg); box-shadow: 0 0 0 3px var(--blue-glow), var(--shadow); transform: translateY(-3px); }
+.tc-icon { font-size: 1.55rem; margin-bottom: .45rem; }
+.tc-title { font-size: .9rem; font-weight: 700; color: var(--text); margin-bottom: .18rem; }
+.tc-sub { font-size: .74rem; color: var(--text2); line-height: 1.4; }
+/* CHIPS */
+.chip-row { display: flex; gap: .4rem; flex-wrap: wrap; }
+.chip { padding: .38rem .85rem; border-radius: 20px; border: 1.5px solid var(--border2); background: var(--surface-solid); color: var(--text2); font-size: .8rem; font-family: var(--font); cursor: pointer; font-weight: 500; transition: all .2s cubic-bezier(.34,1.26,.64,1); }
+.chip:hover { border-color: var(--blue); color: var(--blue); transform: scale(1.05); }
+.chip.sel { background: var(--blue); color: #fff; border-color: var(--blue); box-shadow: 0 2px 10px var(--blue-glow); transform: scale(1.05); }
+/* DEV GOAL */
+.dg-input { width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-solid); color: var(--text); font-family: var(--font); font-size: .9rem; padding: .7rem 1rem; resize: none; line-height: 1.55; transition: border-color .2s, box-shadow .2s; }
+.dg-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
+.dg-input::placeholder { color: var(--text3); }
+/* FACH CARDS */
+.fach-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .58rem; width: 100%; }
+.fach-card { border-radius: var(--radius-sm); padding: .9rem .85rem; cursor: pointer; border: 1.5px solid transparent; transition: all .22s cubic-bezier(.34,1.26,.64,1); background: var(--surface-solid); box-shadow: var(--shadow-sm); }
+.fach-card:hover { transform: translateY(-2px) scale(1.02); box-shadow: var(--shadow); }
+.fach-card.sel { box-shadow: 0 0 0 3px color-mix(in srgb, var(--fc, var(--blue)) 28%, transparent), var(--shadow); transform: translateY(-2px) scale(1.02); border-color: var(--fc, var(--blue)); }
+.fc-emoji { font-size: 1.35rem; margin-bottom: .3rem; line-height: 1; }
+.fc-name { font-size: .8rem; font-weight: 700; color: var(--text); line-height: 1.25; }
+.fc-sub { font-size: .66rem; color: var(--text2); margin-top: .08rem; }
+/* JGST */
+.jgst-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: .42rem; width: 100%; }
+.jg-chip { padding: .58rem .3rem; border-radius: var(--radius-sm); border: 1.5px solid var(--border2); background: var(--surface-solid); color: var(--text2); font-size: .88rem; font-weight: 700; cursor: pointer; text-align: center; transition: all .22s cubic-bezier(.34,1.26,.64,1); }
+.jg-chip:hover { border-color: var(--blue); color: var(--blue); transform: translateY(-2px); }
+.jg-chip.sel { background: var(--blue); color: #fff; border-color: var(--blue); box-shadow: 0 2px 14px var(--blue-glow); transform: translateY(-2px); }
+/* STATUS */
+.status-pill { display: inline-flex; align-items: center; gap: .42rem; padding: .42rem .9rem; border-radius: 20px; font-size: .8rem; font-weight: 500; margin-top: .5rem; }
+.status-pill.ok { background: var(--green-bg); color: var(--green-text); border: 1px solid rgba(52,199,89,.22); }
+.status-pill.err { background: var(--red-bg); color: var(--red); border: 1px solid rgba(255,59,48,.2); }
+.status-pill.loading { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(0,113,227,.15); }
+.s-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.s-dot.pulse { animation: pulse 1.2s ease-in-out infinite; }
+/* LOADING */
+.load-wrap { display: flex; flex-direction: column; align-items: center; gap: .7rem; padding: 1.4rem; }
+.load-bar-outer { width: 100%; max-width: 260px; height: 3px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.load-bar-inner { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--blue) 0%, #5ac8fa 50%, var(--blue) 100%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.load-text { font-size: .82rem; color: var(--text2); font-weight: 600; }
+.load-sub { font-size: .72rem; color: var(--text3); }
+/* UV CARDS */
+.uv-list { display: flex; flex-direction: column; gap: .42rem; width: 100%; }
+.uv-card { background: var(--surface-solid); border: 1.5px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all .2s cubic-bezier(.34,1.26,.64,1); overflow: hidden; box-shadow: var(--shadow-sm); }
+.uv-card:hover { border-color: rgba(0,113,227,.35); transform: translateX(3px); box-shadow: var(--shadow); }
+.uv-card.sel { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
+.uv-card-header { padding: .78rem 1rem; }
+.uv-card-title { font-size: .86rem; font-weight: 600; color: var(--text); line-height: 1.45; white-space: normal; word-break: normal; }
+.uv-card-meta { font-size: .7rem; color: var(--text3); margin-top: .2rem; }
+.uv-card-comps { border-top: 1px solid var(--border); padding: .65rem 1rem .75rem; background: rgba(0,0,0,.014); display: none; flex-direction: column; gap: .22rem; animation: fadeDown .2s ease; }
+.uv-card.sel .uv-card-comps { display: flex; }
+/* COMP CHIPS */
+.comp-section-lbl { font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); margin: .38rem 0 .18rem; }
+.comp-section-lbl:first-child { margin-top: 0; }
+.comp-chip { display: flex; align-items: flex-start; gap: .5rem; padding: .44rem .72rem; border-radius: var(--radius-xs); border: 1.5px solid var(--border); background: var(--surface-solid); cursor: pointer; font-size: .8rem; color: var(--text2); line-height: 1.5; transition: all .18s; user-select: none; font-family: var(--font); }
+.comp-chip:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+.comp-chip.sel { background: var(--blue); color: #fff; border-color: var(--blue); }
+.comp-check { flex-shrink: 0; width: 1rem; font-size: .78rem; margin-top: .05rem; }
+/* CUSTOM COMP */
+.custom-comp-input { width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-solid); color: var(--text); font-family: var(--font); font-size: .85rem; padding: .55rem .8rem; resize: none; line-height: 1.5; transition: border-color .2s, box-shadow .2s; }
+.custom-comp-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
+.custom-comp-input::placeholder { color: var(--text3); }
+/* UPLOAD */
+.upload-zone { border: 2px dashed var(--border2); border-radius: var(--radius); padding: 1.8rem; text-align: center; cursor: pointer; transition: all .25s; background: rgba(255,255,255,.45); }
+.upload-zone:hover, .upload-zone.drag { border-color: var(--blue); background: var(--blue-bg); transform: scale(1.01); }
+.upload-zone.has-file { border-color: var(--green); border-style: solid; background: var(--green-bg); }
+.upload-icon { font-size: 1.9rem; margin-bottom: .45rem; }
+.upload-title { font-size: .88rem; font-weight: 600; color: var(--text); margin-bottom: .18rem; }
+.upload-sub { font-size: .74rem; color: var(--text3); }
+/* LG */
+.lg-section { width: 100%; margin-bottom: .75rem; }
+.lg-section-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); margin-bottom: .3rem; }
+/* BUTTONS */
+.btn-primary { padding: .62rem 1.5rem; border-radius: 22px; border: none; background: var(--blue); color: #fff; font-size: .88rem; font-weight: 600; font-family: var(--font); cursor: pointer; transition: all .2s cubic-bezier(.34,1.26,.64,1); box-shadow: 0 4px 16px var(--blue-glow); }
+.btn-primary:hover { background: var(--blue-light); transform: scale(1.04); box-shadow: 0 6px 22px var(--blue-glow); }
+.btn-primary:disabled { background: var(--border2); color: var(--text3); box-shadow: none; transform: none; cursor: default; }
+.btn-ghost { padding: .55rem 1.1rem; border-radius: 22px; border: 1.5px solid var(--border2); background: var(--surface-solid); color: var(--text2); font-size: .84rem; font-weight: 500; font-family: var(--font); cursor: pointer; transition: all .2s; }
+.btn-ghost:hover { border-color: var(--text2); color: var(--text); background: rgba(0,0,0,.03); }
+.sa { display: flex; gap: .6rem; align-items: center; margin-top: 1.35rem; flex-wrap: wrap; }
+/* ═══ QA CHAT ═══ */
+.qa-outer { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Nav bar */
+.qa-nav { display: flex; align-items: center; gap: .5rem; padding: .55rem 1.6rem .4rem; flex-shrink: 0; max-width: 720px; width: 100%; margin: 0 auto; }
+.qa-nav-btn { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--border2); background: var(--surface-solid); color: var(--text2); font-size: .85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .18s; flex-shrink: 0; }
+.qa-nav-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+.qa-nav-btn:disabled { opacity: .28; cursor: default; }
+.qa-phase-label { font-size: .78rem; font-weight: 600; color: var(--text2); flex: 1; text-align: center; }
+
+/* Hero question */
+.qa-hero { flex-shrink: 0; padding: .6rem 1.6rem 0; max-width: 720px; width: 100%; margin: 0 auto; }
+.q-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.6rem 1.25rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,.1), 0 0 0 1px rgba(255,255,255,.5) inset;
+  animation: qIn .3s cubic-bezier(.34,1.26,.64,1);
+}
+@keyframes qIn {
+  from { opacity: 0; transform: scale(.96) translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.q-label { font-size: .63rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--blue); margin-bottom: .5rem; opacity: .8; }
+.q-text { font-size: 1.12rem; font-weight: 700; color: var(--text); line-height: 1.45; margin-bottom: .3rem; letter-spacing: -.02em; }
+.q-hint { font-size: .82rem; color: var(--text2); font-style: italic; line-height: 1.5; margin-bottom: .4rem; }
+.q-tip-btn { font-size: .74rem; color: var(--blue); border: none; background: none; cursor: pointer; padding: 0; font-family: var(--font); font-weight: 500; display: inline-flex; align-items: center; gap: .22rem; margin-top: .5rem; transition: opacity .15s; }
+.q-tip-btn:hover { opacity: .65; }
+.tip-out { margin-top: .55rem; background: var(--blue-bg); border: 1px solid rgba(0,113,227,.15); border-radius: var(--radius-sm); padding: .65rem .9rem; font-size: .81rem; color: var(--blue); line-height: 1.6; animation: fadeUp .2s ease; }
+
+/* Typing */
+.t-bubble { display: inline-flex; gap: 4px; align-items: center; padding: .52rem .9rem; background: var(--surface-solid); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-sm); }
+.td { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); animation: blink 1.2s infinite; }
+.td:nth-child(2) { animation-delay: .15s; } .td:nth-child(3) { animation-delay: .3s; }
+@keyframes blink { 0%,80%,100%{opacity:.2;transform:scale(.8);}40%{opacity:1;transform:scale(1.15);} }
+
+/* History accordion */
+.qa-history { flex: 1; overflow-y: auto; padding: .8rem 1.6rem 0; max-width: 720px; width: 100%; margin: 0 auto; }
+.qa-history::-webkit-scrollbar { width: 4px; }
+.qa-history::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.history-toggle {
+  display: flex; align-items: center; gap: .5rem;
+  font-size: .72rem; font-weight: 600; color: var(--text3);
+  cursor: pointer; padding: .35rem 0; margin-bottom: .35rem;
+  user-select: none; transition: color .15s;
+  text-transform: uppercase; letter-spacing: .07em;
+}
+.history-toggle:hover { color: var(--text2); }
+.history-toggle-icon { font-size: .65rem; transition: transform .2s; }
+.history-toggle-icon.open { transform: rotate(90deg); }
+.history-toggle-line { flex: 1; height: 1px; background: var(--border); }
+
+.history-items { display: none; flex-direction: column; gap: .5rem; margin-bottom: .65rem; }
+.history-items.open { display: flex; animation: fadeUp .2s ease; }
+
+/* Phase summary cards in history */
+.phase-sum {
+  background: var(--green-bg); border: 1px solid rgba(52,199,89,.2);
+  border-radius: var(--radius-sm); padding: .75rem .95rem;
+  cursor: pointer; transition: all .18s;
+}
+.phase-sum:hover { box-shadow: var(--shadow-sm); }
+.ps-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .35rem; }
+.ps-badge { background: var(--green); color: #fff; font-size: .64rem; font-weight: 700; padding: .16rem .52rem; border-radius: 20px; }
+.ps-title { font-size: .84rem; font-weight: 600; color: var(--green-text); flex: 1; }
+.ps-chevron { font-size: .7rem; color: var(--green-text); opacity: .6; transition: transform .2s; }
+.ps-items { display: flex; flex-direction: column; gap: .22rem; }
+.ps-item { font-size: .79rem; color: var(--text); padding-left: .9rem; position: relative; line-height: 1.4; }
+.ps-item::before { content: "✓"; position: absolute; left: 0; color: var(--green); font-size: .72rem; }
+
+/* Exchange rows in history */
+.exchange {
+  background: var(--surface-solid); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); overflow: hidden;
+  transition: box-shadow .18s;
+}
+.exchange:hover { box-shadow: var(--shadow-sm); }
+.ex-q {
+  font-size: .78rem; font-weight: 600; color: var(--text2);
+  padding: .52rem .8rem; border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.ex-a {
+  font-size: .82rem; color: var(--text);
+  padding: .52rem .8rem; line-height: 1.55;
+}
+.ex-fb { font-size: .75rem; color: var(--green-text); font-style: italic; padding: .25rem .8rem .4rem; border-top: 1px solid rgba(52,199,89,.15); background: var(--green-bg); }
+
+.thread-end { height: 1.5rem; flex-shrink: 0; }
+/* INPUT BAR */
+.ibar { flex-shrink: 0; background: var(--glass); backdrop-filter: blur(22px) saturate(1.7); -webkit-backdrop-filter: blur(22px) saturate(1.7); border-top: 1px solid var(--glass-border); padding: .82rem 1.6rem .98rem; }
+.ibar-inner { display: flex; gap: .55rem; align-items: flex-end; max-width: 720px; margin: 0 auto; }
+textarea#ci { flex: 1; border: 1.5px solid var(--border2); border-radius: var(--radius); background: var(--surface-solid); color: var(--text); font-family: var(--font); font-size: .91rem; padding: .65rem 1rem; resize: none; line-height: 1.55; max-height: 130px; overflow-y: auto; transition: border-color .2s, box-shadow .2s; }
+textarea#ci:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
+textarea#ci::placeholder { color: var(--text3); }
+.btn-send { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--blue); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; transition: all .2s cubic-bezier(.34,1.26,.64,1); box-shadow: 0 3px 14px var(--blue-glow); }
+.btn-send:hover { transform: scale(1.12); box-shadow: 0 5px 20px var(--blue-glow); }
+.btn-send:disabled { background: var(--border2); box-shadow: none; transform: none; cursor: default; }
+.ibar-hint { font-size: .67rem; color: var(--text3); text-align: center; margin-top: .26rem; max-width: 720px; margin: .26rem auto 0; }
+/* RESULTS */
+.res-wrap { max-width: 720px; width: 100%; margin: 0 auto; padding: 1.2rem 1.6rem 2rem; display: flex; flex-direction: column; gap: .62rem; }
+.res-hero { background: linear-gradient(135deg, #0071e3 0%, #5ac8fa 100%); border-radius: var(--radius); padding: 1.2rem 1.3rem; color: #fff; box-shadow: var(--shadow); }
+.res-hero-label { font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; opacity: .72; margin-bottom: .32rem; }
+.res-hero-text { font-size: 1rem; font-weight: 600; line-height: 1.5; }
+.res-card { background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
+.res-card-head { padding: .62rem 1.1rem; border-bottom: 1px solid var(--border); font-size: .79rem; font-weight: 600; color: var(--text2); display: flex; justify-content: space-between; align-items: center; }
+.res-card-body { padding: .85rem 1.1rem; font-size: .87rem; line-height: 1.75; color: var(--text); }
+.copy-btn { font-size: .7rem; color: var(--blue); border: none; background: none; cursor: pointer; font-family: var(--font); font-weight: 500; transition: opacity .15s; }
+.copy-btn:hover { opacity: .65; }
+.dev-card { background: var(--purple-bg); border: 1.5px solid rgba(175,82,222,.2); border-radius: var(--radius); padding: 1rem 1.15rem; }
+.dev-card h4 { font-size: .84rem; font-weight: 700; color: var(--purple); margin-bottom: .32rem; }
+.dev-rating { display: flex; gap: .32rem; margin: .38rem 0 .28rem; }
+.dev-rating button { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid rgba(175,82,222,.3); background: var(--surface-solid); font-size: .82rem; cursor: pointer; color: var(--purple); font-weight: 600; transition: all .2s; font-family: var(--font); }
+.dev-rating button.sel, .dev-rating button:hover { background: var(--purple); color: #fff; border-color: var(--purple); transform: scale(1.12); }
+.dev-note { width: 100%; border: 1.5px solid rgba(175,82,222,.25); border-radius: var(--radius-sm); background: rgba(255,255,255,.7); color: var(--text); font-family: var(--font); font-size: .83rem; padding: .5rem .75rem; resize: none; margin-top: .28rem; line-height: 1.55; transition: border-color .2s, box-shadow .2s; }
+.dev-note:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 3px rgba(175,82,222,.15); }
+.dev-ki-out { margin-top: .5rem; font-size: .82rem; line-height: 1.65; color: #6a2aa0; background: rgba(255,255,255,.7); border: 1px solid rgba(175,82,222,.2); border-radius: var(--radius-sm); padding: .62rem .85rem; }
+/* VP */
+.vp-wrap { padding: 1rem 1.6rem 2.5rem; max-width: 1040px; width: 100%; margin: 0 auto; }
+.vp-head { margin-bottom: .82rem; }
+.vp-head h2 { font-size: 1.1rem; font-weight: 700; letter-spacing: -.02em; }
+.vp-head p { font-size: .79rem; color: var(--text2); margin-top: .14rem; }
+.vp-meta-bar { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: .82rem; padding: .62rem 1rem; background: var(--surface-solid); border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: .79rem; }
+.vp-meta-bar span { color: var(--text2); } .vp-meta-bar strong { color: var(--text); }
+.vp-table-wrap { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+table.vpt { width: 100%; border-collapse: collapse; font-size: .8rem; }
+table.vpt th { background: var(--surface-solid); padding: .5rem .8rem; text-align: left; font-size: .69rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text2); border-bottom: 1px solid var(--border); }
+table.vpt th:first-child { width: 100px; } table.vpt th:nth-child(3) { width: 140px; }
+table.vpt td { padding: .6rem .8rem; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.6; color: var(--text); }
+table.vpt tr:last-child td { border-bottom: none; }
+table.vpt td:first-child { font-weight: 600; color: var(--text2); font-size: .77rem; white-space: nowrap; }
+table.vpt td[contenteditable="true"]:focus { background: var(--blue-bg); outline: none; }
+table.vpt tr:hover td { background: rgba(0,0,0,.01); }
+.vp-empty-note { color: var(--text3); font-style: italic; font-size: .78rem; }
+.vp-actions { display: flex; gap: .55rem; margin-top: .9rem; align-items: center; flex-wrap: wrap; }
+.vp-hint-text { font-size: .72rem; color: var(--text3); }
+/* ANIMATIONS */
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+@keyframes fadeDown { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes pulse { 0%,100% { opacity:.4; transform:scale(.8); } 50% { opacity:1; transform:scale(1.2); } }
+.fu { animation: fadeUp .25s cubic-bezier(.34,1.26,.64,1); }
+.fi { animation: fadeIn .2s ease; }
+.step-screen {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 2rem 1.5rem;
+}
+.step-wrap {
+  width: 100%; max-width: 560px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0;
+}
+.step-card {
+  width: 100%;
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 2rem 2rem 1.6rem;
+  box-shadow: var(--shadow);
+  animation: stepIn .3s cubic-bezier(.34,1.26,.64,1);
+}
+@keyframes stepIn {
+  from { opacity: 0; transform: translateY(18px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+.step-eyebrow {
+  font-size: .65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--blue); margin-bottom: .3rem;
+}
+.step-question {
+  font-size: 1.25rem; font-weight: 700; color: var(--text);
+  letter-spacing: -.025em; line-height: 1.35; margin-bottom: .35rem;
+}
+.step-sub {
+  font-size: .84rem; color: var(--text2); line-height: 1.5;
+  margin-bottom: 1.4rem;
+}
+.step-options {
+  display: flex; flex-direction: column; gap: .5rem;
+  width: 100%; margin-bottom: 1.2rem;
+}
+.step-option {
+  display: flex; align-items: center; gap: .9rem;
+  padding: .85rem 1.05rem; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border); background: var(--surface-solid);
+  cursor: pointer; transition: all .2s cubic-bezier(.34,1.26,.64,1);
+  text-align: left; font-family: var(--font);
+}
+.step-option:hover {
+  border-color: var(--blue); background: var(--blue-bg);
+  transform: translateX(4px);
+}
+.step-option.sel {
+  border-color: var(--blue); background: var(--blue-bg);
+  box-shadow: 0 0 0 3px var(--blue-glow);
+}
+.step-opt-icon { font-size: 1.3rem; flex-shrink: 0; }
+.step-opt-label { font-size: .9rem; font-weight: 600; color: var(--text); }
+.step-opt-sub { font-size: .74rem; color: var(--text2); margin-top: .05rem; }
+.step-grid {
+  display: grid; gap: .48rem; width: 100%; margin-bottom: 1.2rem;
+}
+.step-grid-2 { grid-template-columns: 1fr 1fr; }
+.step-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.step-grid-6 { grid-template-columns: repeat(6, 1fr); }
+.step-grid .step-option {
+  flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: .9rem .5rem; gap: .35rem;
+}
+.step-grid .step-option:hover { transform: translateY(-2px) scale(1.03); }
+.step-grid .step-opt-label { font-size: .82rem; }
+.step-textarea {
+  width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-solid); color: var(--text); font-family: var(--font);
+  font-size: .92rem; padding: .75rem 1rem; resize: none; line-height: 1.55;
+  margin-bottom: 1.2rem; transition: border-color .2s, box-shadow .2s;
+}
+.step-textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
+.step-textarea::placeholder { color: var(--text3); }
+.step-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: .8rem; border-top: 1px solid var(--border);
+}
+.step-counter {
+  font-size: .7rem; color: var(--text3); font-weight: 500;
+}
+.step-nav { display: flex; gap: .5rem; }
+.step-back {
+  padding: .5rem 1rem; border-radius: 20px; border: 1.5px solid var(--border2);
+  background: none; color: var(--text2); font-size: .83rem; font-weight: 500;
+  font-family: var(--font); cursor: pointer; transition: all .18s;
+}
+.step-back:hover { border-color: var(--text2); color: var(--text); }
+.step-next {
+  padding: .52rem 1.3rem; border-radius: 20px; border: none;
+  background: var(--blue); color: #fff; font-size: .86rem; font-weight: 600;
+  font-family: var(--font); cursor: pointer;
+  transition: all .2s cubic-bezier(.34,1.26,.64,1);
+  box-shadow: 0 3px 14px var(--blue-glow);
+}
+.step-next:hover { background: var(--blue-light); transform: scale(1.04); box-shadow: 0 5px 18px var(--blue-glow); }
+.step-next:disabled { background: var(--border2); color: var(--text3); box-shadow: none; transform: none; cursor: default; }
+.step-skip { font-size: .75rem; color: var(--text3); cursor: pointer; background: none; border: none; font-family: var(--font); padding: 0; transition: color .15s; }
+.step-skip:hover { color: var(--text2); }
+.step-status { margin-top: .5rem; }
+
+.hidden { display: none !important; }
+@media print {
+  .sidebar, .topbar, .tabs, .ibar, .vp-actions { display: none !important; }
+  .main, .content, .pane, .pane.active { overflow: visible; height: auto; }
+  .vp-wrap { padding: .5rem; }
+  table.vpt td[contenteditable] { background: white !important; }
+}
+@media (max-width: 560px) {
+  .sidebar { width: 46px; }
+  .sess-info, .sb-head p, .sb-head h1, .sb-logo, .btn-new span { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sb-head"><div class="sb-logo">Referendariat NRW</div><h1>UB-Planungshilfe</h1><p>Gymnasium · Sek I</p></div>
+  <div class="sb-list" id="sb-list"></div>
+  <button class="btn-new" onclick="newSession()"><span style="font-size:.9rem">＋</span><span>Neue Planung</span></button>
+</div>
+<div class="main">
+  <div class="topbar" id="topbar">
+    <div class="tb-meta" id="tb-meta">Einrichtung</div>
+    <div class="tb-title" id="tb-title">Neue Planung starten</div>
+    <div class="phase-dots" id="phase-dots"></div>
+    <div class="prog-wrap"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <div class="tabs hidden" id="tabs">
+    <div class="tab active" data-tab="planung" onclick="switchTab('planung')">Planung</div>
+    <div class="tab" data-tab="vp" onclick="switchTab('vp')">Verlaufsplan</div>
+  </div>
+  <div class="content" id="content">
+    <div class="pane active" id="pane-planung">
+      <!-- STEP SCREEN: single card at a time -->
+      <div class="step-screen hidden" id="step-screen">
+        <div class="step-wrap" id="step-wrap">
+          <!-- filled by JS -->
+        </div>
+      </div>
+
+      <!-- QA -->
+      <div class="hidden" id="screen-qa">
+        <div class="qa-outer">
+          <!-- Nav -->
+          <div class="qa-nav" id="qa-nav"></div>
+          <!-- History accordion -->
+          <div class="qa-history" id="qa-history"></div>
+          <div class="thread-end"></div>
+          <!-- Hero: current question (bleibt direkt über der Eingabezeile) -->
+          <div class="qa-hero" id="qa-hero"></div>
+        </div>
+      </div>
+      <!-- RESULTS -->
+      <div class="hidden" id="screen-results"><div class="res-wrap" id="res-area"></div></div>
+    </div>
+    <div class="pane hidden" id="pane-vp">
+      <div class="vp-wrap">
+        <div class="vp-head"><h2>Verlaufsplan</h2><p>Direkt bearbeitbar · Strg+P zum Drucken / Als PDF speichern</p></div>
+        <div class="vp-meta-bar" id="vp-meta"></div>
+        <div class="vp-table-wrap"><table class="vpt"><thead><tr><th>Phase</th><th>Geplantes Unterrichtsgeschehen</th><th>Organisation / Material</th><th>Didaktisch-methodischer Kommentar</th></tr></thead><tbody id="vp-tbody"></tbody></table></div>
+        <div class="vp-actions"><button class="btn-primary" onclick="window.print()">🖨 Drucken / Als PDF</button><button class="btn-ghost" onclick="addVPRow()">＋ Phase</button><span class="vp-hint-text">Alle Felder direkt bearbeitbar</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="ibar hidden" id="ibar">
+    <div class="ibar-inner"><textarea id="ci" rows="1" placeholder="Deine Antwort…" onkeydown="hk(event)" oninput="ar(this)"></textarea><button class="btn-send" id="btn-send" onclick="sendAnswer()">↑</button></div>
+    <div class="ibar-hint">Enter senden · Shift+Enter neue Zeile</div>
+  </div>
+</div>
+<script>
+
+// ═══════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════
+const FACH_DATA = {"Sport":{"emoji":"⚽","color":"#34c759","bg":"rgba(52,199,89,.09)","sub":"Bewegung & Gesundheit"},"Deutsch":{"emoji":"📚","color":"#ff3b30","bg":"rgba(255,59,48,.09)","sub":"Sprache & Literatur"},"Englisch":{"emoji":"🌍","color":"#0071e3","bg":"rgba(0,113,227,.09)","sub":"Fremdsprache"},"Mathematik":{"emoji":"📐","color":"#5856d6","bg":"rgba(88,86,214,.09)","sub":"Zahlen & Strukturen"},"Biologie":{"emoji":"🌿","color":"#30d158","bg":"rgba(48,209,88,.09)","sub":"Leben & Natur"},"Chemie":{"emoji":"⚗️","color":"#ff9f0a","bg":"rgba(255,159,10,.09)","sub":"Stoffe & Reaktionen"},"Praktische Philosophie":{"emoji":"🤔","color":"#af52de","bg":"rgba(175,82,222,.09)","sub":"Denken & Urteilen"},"Sozialwissenschaften":{"emoji":"🏛️","color":"#ff6b35","bg":"rgba(255,107,53,.09)","sub":"Politik & Gesellschaft"},"Evangelische Religion":{"emoji":"✝️","color":"#9b59b6","bg":"rgba(155,89,182,.09)","sub":"Glaube & Ethik"},"Informatik":{"emoji":"💻","color":"#0a84ff","bg":"rgba(10,132,255,.09)","sub":"Code & Algorithmen"},"Spanisch":{"emoji":"🇪🇸","color":"#ff453a","bg":"rgba(255,69,58,.09)","sub":"Fremdsprache"},"Französisch":{"emoji":"🇫🇷","color":"#30aaff","bg":"rgba(48,170,255,.09)","sub":"Fremdsprache"}};
+const KLP = {"Sport":"KLP Sport Gymnasium NRW Sek I (G9): Lehrplanebenen SchulG→APO→Rahmenvorgaben Schulsport (Doppelauftrag, Päd. Perspektiven A–F)→KLP→SILP→UV→Einzelstunde. 9 Bewegungsfelder: BF1 Körper wahrnehmen · BF2 Spielen entdecken · BF3 Laufen/Springen/Werfen · BF4 Schwimmen · BF5 Turnen · BF6 Gestalten/Tanzen · BF7 Sportspiele · BF8 Gleiten/Fahren/Rollen · BF9 Ringen und Kämpfen. Inhaltsfelder: a Bewegungsstruktur · b Bewegungsgestaltung · c Wagnis/Verantwortung · d Leistung · e Kooperation/Konkurrenz · f Gesundheit. Kompetenzbereiche: BWK · MK · UK.","Deutsch":"KLP Deutsch Gymnasium NRW Sek I: Sprechen und Zuhören · Schreiben · Lesen und Umgang mit Texten/Medien · Reflexion über Sprache. Inhaltsfelder: Sprache · Texte · Kommunikation · Medien.","Englisch":"KLP Englisch Gymnasium NRW Sek I: Kommunikative Kompetenzen (Hörverstehen, Leseverstehen, Sprechen, Schreiben, Sprachmittlung) · Interkulturelle Kompetenzen · Verfügbarkeit sprachlicher Mittel. GeR Ende Jg 10: B1+/B2.","Mathematik":"KLP Mathematik Gymnasium NRW Sek I: Prozessbezogen: Problemlösen · Modellieren · Argumentieren · Kommunizieren · Darstellen. Inhaltsbezogen: Arithmetik/Algebra · Geometrie · Funktionen · Stochastik.","Biologie":"KLP Biologie Gymnasium NRW Sek I: Umgang mit Fachwissen · Erkenntnisgewinnung · Kommunikation · Bewertung. Inhaltsfelder: Zelle · Energiestoffwechsel · Genetik · Evolution · Ökologie.","Chemie":"KLP Chemie Gymnasium NRW Sek I: Umgang mit Fachwissen · Erkenntnisgewinnung · Kommunikation · Bewertung. Inhaltsfelder: Stoffe · Atombau · Reaktionen · Säuren/Basen · Organische Chemie.","Praktische Philosophie":"KLP Praktische Philosophie Gymnasium NRW: Wahrnehmungs-/Darstellungskompetenz · Methodenkompetenz · Urteilskompetenz · Handlungskompetenz.","Sozialwissenschaften":"KLP Sozialwissenschaften Gymnasium NRW Sek I: Sachkompetenz · Methodenkompetenz · Urteilskompetenz · Handlungskompetenz.","Evangelische Religion":"KLP Evangelische Religionslehre Gymnasium NRW Sek I: Wahrnehmen/Beschreiben · Deuten/Verstehen · Urteilen/Bewerten · Kommunizieren/Gestalten. Inhaltsfelder: Mensch/Welt · Gott · Jesus Christus · Kirche · Weltreligionen · Ethik.","Informatik":"KLP Informatik Gymnasium NRW Sek I: Darstellung von Informationen · Algorithmen · Sprachen · Informatiksysteme · Informatik und Gesellschaft.","Spanisch":"KLP Spanisch Gymnasium NRW Sek I: Kommunikative Kompetenzen · Interkulturelle Kompetenzen · Verfügbarkeit sprachlicher Mittel. GeR Ende Jg 10: A2+/B1.","Französisch":"KLP Französisch Gymnasium NRW Sek I: Kommunikative Kompetenzen · Interkulturelle Kompetenzen · Verfügbarkeit sprachlicher Mittel. GeR Ende Jg 10: B1/B1+."};
+const UV_DATA = {"Sport": {"5": [{"jg": 5, "std": 14, "nr": "2.1", "titel": "Unterschiedliche Spiele und Spielideen unter besonderer Berücksichtigung der gruppenübergreifenden Kooperation durchführen", "bf": "BF/SB 2: Das Spielen entdecken, Spielräume nutzen", "bf_short": "BF2", "if_": ["e"], "bwk": ["Bewegungsspiele eigenverantwortlich, kreativ und kooperativ spielen [6 BWK 2.1]", "Kleine Spiele und Pausenspiele eigenverantwortlich (nach-)spie- len und situations- und kriterienorientiert gestalten [6 BWK 2.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "Merkmale für faires, kooperatives und teamorientiertes sportliches Handeln benen- nen [6 SK e1]"], "mk": ["in sportlichen Handlungssituationen grundlegende, bewegungsfeldspezifische Ver- einbarungen und Regeln dokumentieren [6 MK e2]"], "uk": ["sportliche Handlungs- und Spielsituationen hinsichtlich ausgewählter Aspekte (u.a. Einhaltung von Regeln und Vereinbarungen, Fairness im Mit- und Gegeneinander) auf grundlegendem Niveau bewerten [6 UK e1]"]}, {"jg": 5, "std": 4, "nr": "2.2", "titel": "Vielfältige Spiel- und Übungsformen („Game for Brains“) u.a. zur Förderung der Konzentrationsfähigkeit erproben", "bf": "BF/SB 2: Das Spielen entdecken, Spielräume nutzen", "bf_short": "BF2", "if_": ["d"], "bwk": ["lernförderliche Spiele und Spielformen unter Berücksichtigung ausgewählter Zielsetzungen (u.a. Verbesserung der Konzentrati- onsfähigkeit) spielen [6 BWK 2.3] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "psycho-physische Leistungsfaktoren (u.a. Anstrengungsbereitschaft, Konzentrati- onsfähigkeit) in unterschiedlichen Anforderungssituationen benennen [6 SK d2]"], "mk": [], "uk": []}, {"jg": 5, "std": 8, "nr": "2", "titel": "Vielfältiges Bewegen an unterschiedlichen Geräten", "bf": "BF/SB 5: Bewegen an Geräten – Turnen", "bf_short": "BF5", "if_": ["c"], "bwk": ["vielfältiges turnerisches Bewegen (Stützen, Balancieren, Rollen, Klettern, Springen, Hangeln, Schaukeln und Schwingen) an un- terschiedlichen Geräten und Gerätekombinationen (z.B. Boden, Trampolin, Klettertaue, Barren, Kasten u.a.) demonstrieren [6 BWK 5.1]", "grundlegende turnerische Sicherheits- und Hilfestellungen situa- tionsbezogen wahrnehmen und sachgerecht ausführen [6 BWK 5.3] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "die Herausforderungen in einfachen sportlichen Handlungssituationen im Hinblick auf die Anforderung, das eigene Können und mögliche Gefahren beschreiben [6 SK c1]"], "mk": ["verlässlich verbale und nonverbale Unterstützung bei sportlichen Handlungssituati- onen geben und gezielt nutzen [6 MK c1]"], "uk": ["einfache sportliche Wagnissituationen für sich situativ einschätzen und anhand aus- gewählter Kriterien beurteilen [6 UK c1]"]}, {"jg": 5, "std": 8, "nr": "7.1", "titel": "Sammeln von grundlegenden Erfahrungen des Volleyspiels in Spiel- und Übungsformen (Heidelberger Ballschule)", "bf": "BF/SB 7: Spielen in und mit Regelstrukturen – Sportspiele", "bf_short": "BF7", "if_": ["e"], "bwk": ["sich in einfachen spielorientierten Handlungssituationen durch Wahrnehmung von Raum, Spielgerät und Spielerinnen und Spie- lern taktisch angemessen und den Regelvereinbarungen ent- sprechend verhalten [6 BWK 7.2]", "sportspielübergreifende taktische, koordinative und technische Fähigkeiten und Fertigkeiten (u.a. Heidelberger Ballschule) in vielfältigen Spielformen anwenden [6 BWK 7.1] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "Merkmale für faires, kooperatives und teamorientiertes sportliches Handeln benen- nen [6 SK e1]"], "mk": ["selbstständig und verantwortungsvoll Spielflächen und -geräte gemeinsam auf- und abbauen [6 MK e1]"], "uk": ["sportliche Handlungs- und Spielsituationen hinsichtlich ausgewählter Aspekte (u.a. Einhaltung von Regeln und Vereinbarungen, Fairness im Mit- und Gegeneinander) auf grundlegendem Niveau bewerten [6 UK e1]"]}, {"jg": 5, "std": 14, "nr": "6.1/6.2", "titel": "Eine Mini-Gruppenchoreographie mit Seil oder Ball zum Rhythmus der Musik gestalten und demonstrieren.", "if_": ["b"], "bwk": ["Grundformen ästhetisch-gestalterischen Bewegungs (Lau- fen, Hüpfen, Springen) mit ausgewählten Handgeräten (Reifen, Seil oder Ball) oder Alltagsmaterialien für eine ein- fache gymnastische Bewegungsgestaltung nutzen. (6 BWK 6.1) Bewegungsfeldübergreifende Kompetenzerwartungen  SK", "Grundformen gestalterischen Bewegens (in zwei Bewegungsfeldern) benennen. (6 SK b1)", "Grundlegende Aufstellungsformen und Formationen benennen. (6 MK b2)", "Grundformen gestalterischen Bewegens nach- und umgestalten. (6 MK b1)", "Einfache kreative Bewegungsgestaltungen entwickeln und zu einer Präsentation verbinden (6 MK b2)"], "mk": [], "uk": ["Kreative, gestalterische Präsentationen anhand grundlegender Kriterien beurtei- len (6 UK b1)"]}, {"jg": 5, "std": 6, "nr": "4.1", "titel": "Grundlegende Erfahrungen zur Wasserbewältigung in unterschiedlichen Situationen als Voraussetzung für sicheres Schwimmen nutzen", "bf": "BF/SB 4: Bewegen im Wasser – Schwimmen", "bf_short": "BF4", "if_": ["a", "c"], "bwk": ["das unterschiedliche Verhalten des Körpers bei Auftrieb, Absin- ken, Vortrieb und Rotationen (um die Längs-, Quer- und Tiefen- achse) im und unter Wasser wahrnehmen [6 BWK 4.1]", "grundlegende Fertigkeiten (Atmen, Tauchen, Gleiten, Springen) ohne Hilfsmittel im Tiefwasser zum sicheren und zielgerichteten Bewegen nutzen [6 BWK 4.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "unterschiedliche Körperempfindungen und Körperwahrnehmungen in vielfältigen Bewegungssituationen beschreiben [6 SK a1]", "die Herausforderungen in einfachen sportlichen Handlungssituationen im Hinblick auf die Anforderung, das eigene Können und mögliche Gefahren beschreiben [6 SK c1]"], "mk": ["einfache Hilfen (Hilfestellungen, Geländehilfen, Visualisierungen, akustische Signale) beim Erlernen und Üben sportlicher Bewegungen verwenden [6 MK a2]"], "uk": ["einfache Bewegungsabläufe hinsichtlich der Bewegungsqualität auf grundlegendem Niveau kriteriengeleitet beurteilen [6 UK a1]", "einfache sportliche Wagnissituationen für sich situativ einschätzen und anhand aus- gewählter Kriterien beurteilen [6 UK c1]"]}, {"jg": 5, "std": 8, "nr": "4.2", "titel": "Sicheres Verhalten in Badeanstalten und Brustschwimmen als Zielschwimmart", "bf": "BF/SB 4: Bewegen im Wasser – Schwimmen", "bf_short": "BF4", "if_": ["a", "f"], "bwk": ["eine Wechselzug- oder eine Gleichzugtechnik einschließlich Atemtechnik, Start und Wende auf technisch-koordinativ grund- legendem Niveau sicher und ausdauernd ausführen [6 BWK 4.3]", "unterschiedliche Körperempfindungen und Körperwahrnehmungen in vielfältigen Bewegungssituationen beschreiben [6 SK a1]", "wesentliche Bewegungsmerkmale einfacher Bewegungsabläufe benennen [6 SK a2]", "grundlegende sportartspezifische Gefahrenmomente sowie Organisations- und Si- cherheitsvereinbarungen für das sichere sportliche Handeln benennen [6 SK f1]"], "mk": ["einfache Hilfen (Hilfestellungen, Geländehilfen, Visualisierungen, akustische Signale) beim Erlernen und Üben sportlicher Bewegungen verwenden [6 MK a2]", "Spiel-, Übungs- und Wettkampfstätten situationsangemessen und sicherheitsbe- wusst nutzen [6 MK f1]"], "uk": ["einfache Bewegungsabläufe hinsichtlich der Bewegungsqualität auf grundlegendem Niveau kriteriengeleitet beurteilen [6 UK a1]"]}, {"jg": 5, "std": 6, "nr": "4.3", "titel": "Miteinander gegeneinander – Wasserwettkämpfe in verschiedenen Variationen-Vorbereitung Schwimmfest", "bf": "BF/SB 4: Bewegen im Wasser – Schwimmen", "bf_short": "BF4", "if_": ["e"], "bwk": ["in unterschiedlichen Situationen sicherheitsbewusst springen und tauchen [6 BWK 4.4]", "Merkmale für faires, kooperatives und teamorientiertes sportliches Handeln benen- nen [6 SK e1]", "sportartspezifische Vereinbarungen, Regeln und Messverfahren in unterschiedli- chen Bewegungsfeldern beschreiben [6 SK e2]"], "mk": ["selbstständig und verantwortungsvoll Spielflächen und -geräte gemeinsam auf- und abbauen [6 MK e1]"], "uk": ["sportliche Handlungs- und Spielsituationen hinsichtlich ausgewählter Aspekte (u.a. Einhaltung von Regeln und Vereinbarungen, Fairness im Mit- und Gegeneinander) auf grundlegendem Niveau bewerten [6 UK e1]"]}, {"jg": 5, "std": 12, "nr": "6", "titel": "Miteinander Kämpfen", "bf": "BF/SB 9: Ringen und Kämpfen - Zweikampfsport", "bf_short": "BF9", "if_": ["e", "f"], "bwk": ["unter Berücksichtigung der individuellen Voraussetzungen von Partnerin oder Partner, Gegnerin oder Gegner, normungebun- den mit- und gegeneinander um Raum und Gegenstände im Stand und am Boden kämpfen [6 BWK 9.1]", "in einfachen Gruppen- und Zweikampfsituationen fair und regel- gerecht kämpfen [6 BWK 9.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "grundlegende sportartspezifische Gefahrenmomente sowie Organisations- und Si- cherheitsvereinbarungen für das sichere sportliche Handeln benennen [6 SK f1]", "Merkmale für faires, kooperatives und teamorientiertes sportliches Handeln benen- nen [6 SK e1]", "sportartspezifische Vereinbarungen, Regeln und Messverfahren in unterschiedli- chen Bewegungsfeldern beschreiben [6 SK e2]"], "mk": ["selbstständig und verantwortungsvoll Spielflächen und -geräte gemeinsam auf- und abbauen [6 MK e1]", "in sportlichen Handlungssituationen grundlegende, bewegungsfeldspezifische Ver- einbarungen und Regeln dokumentieren [6 MK e2]", "Spiel-, Übungs- und Wettkampfstätten situationsangemessen und sicherheitsbe- wusst nutzen [6 MK f1]"], "uk": ["sportliche Handlungs- und Spielsituationen hinsichtlich ausgewählter Aspekte (u.a. Einhaltung von Regeln und Vereinbarungen, Fairness im Mit- und Gegeneinander) auf grundlegendem Niveau bewerten [6 UK e1]"]}, {"jg": 5, "std": 18, "nr": "3.1/3.2.", "titel": "Leichtathletische Disziplinen in ihren Grundformen entdecken und erleben", "if_": ["a", "d"], "bwk": ["Grundlegendes leichtathletisches Bewegen (schnelles Laufen, weites/hohes Springen, weites/zielgenaues Wer- den) vielseitig und spielbezogen ausführen. (6 BWK 3.1)", "Leichtathletische Disziplinen (u.a. Sprint, Weitsprung, Ballwurf) auf grundlegendem Fertigkeitsniveau ausführen (6 BWK 3.2.) Bewegungsfeldübergreifende Kompetenzerwartungen  SK", "Unterschiedliche Körperempfindungen und Körperwahrnehmungen in vielfälti- gen Bewegungssituationen beschreiben (6 SK a1)", "Wesentliche Bewegungsmerkmale einfacher Bewegungsabläufe benennen. (SK a2)", "Die motorischen Grundfähigkeiten (Kraft, Schnelligkeit, Ausdauer, Beweglichkeit) in unterschiedlichen Anforderungssituationen benennen. (6 SK d1)", "Psycho-physische Leistungsfaktoren (u.a. Anstrengungsbereitschaft, Konzentrat- tionsfähigkeit) in unterschiedlichen Anforderungssituationen benennen. (6 SK d2)", "Psycho-physische Reaktionen des Körpers in sportlichen Anforderungssituatio- nen beschreiben (6 SK d3)", "Mediengestützte Bewegungsbeobachtungen zur kriteriengeleiteten Rückmel- dung auf grundlegendem Niveau nutzen (6 MK a1).", "Einfache Hilfen (Hilfestellungen, Geländehilfen, Visualisierungen, akustische Sig- nale) beim Erlernen und Üben sportlicher Bewegungen verwenden. (6 MK a2)", "Einfache Methoden zur Erfassung von körperlicher Leistungsfähigkeit anwenden (6 MK d1)"], "mk": [], "uk": ["Einfache Bewegungsabläufe hinsichtlich der Bewegungsqualität auf grundlegen- dem Niveau kriteriengeleitet beurteilen. (6 UK a1)", "Ihre individuelle Leistungsfähigkeit in unterschiedlichen sportbezogenen Situati- onen anhand ausgewählter Kriterien auf grundlegendem Niveau beurteilen. (6 UK d1)"]}], "6": [{"jg": 6, "std": 8, "nr": "1.1", "titel": "Kennenlernen der grundlegenden Bestandteile von allgemeinen und sportartspezifischen Aufwärmprogrammen als gezielte Maßnahme zur", "bf": "BF/SB 1: Den Körper wahrnehmen und Bewegungsfähigkeit aus-", "bf_short": "BF1", "if_": ["f", "d"], "bwk": ["sich altersgerecht aufwärmen und die Intensität des Aufwärm- prozesses an der eigenen Körperreaktion wahrnehmen [6 BWK 1.1]", "eine aerobe Ausdauerleistung ohne Unterbrechung im Schwim- men (15', beliebige Schwimmart, mind. 200m) und in einem weiteren Bewegungsfeld über einen je nach Sportart angemes- senen Zeitraum (z.B. Laufen 15', Aerobic 15', Radfahren 30) er- bringen [6 BWK 1.4]", "psycho-physische Reaktionen des Körpers in sportlichen Anforderungssituationen beschreiben [6 SK d3]", "Merkmale einer sachgerechten Vorbereitung auf sportliches Bewegen (u.a. allge- meines Aufwärmen, Kleidung) benennen [6 SK f2]"], "mk": ["Spiel-, Übungs- und Wettkampfstätten situationsangemessen und sicherheitsbe- wusst nutzen [6 MK f1]", "einfache Methoden zur Erfassung von körperlicher Leistungsfähigkeit anwenden [6 MK d1]"], "uk": ["körperliche Anstrengung anhand der Reaktionen des eigenen Körpers auf grundle- gendem Niveau gesundheitsorientiert beurteilen [6 UK f1]"]}, {"jg": 6, "std": 10, "nr": "9", "titel": "Rollen und Fortbewegen", "if_": ["c", "f"], "bwk": ["Sich mit einem Gleit- oder Fahr- oder Rollgerät kontrolliert fortbewegen, gezielt die Richtung ändern sowie situations- und sicherheitsbewusst beschleunigen und bremsen. (6 BWK 8.1.)", "Grundlegende, gerätespezifische Anforderungssituationen beim Gleiten oder Fahren oder Rollen unter bewegungs- ökonomischen oder gestalterischen Aspekten sicherheits- bewusst bewältigen. (6 BWK 8.2.) Bewegungsfeldübergreifende Kompetenzerwartungen  SK", "Grundlegende sportartspezifische Gefahrenmomenten soweit Organisations- und Sicherheitsvereinbarungen für das sichere sportliche Handeln benennen (6 SK f1)", "Die Herausforderungen in einfachen sportlichen Handlungssituationen im Hin- blick auf die Anforderung, das eigene Können und mögliche Gefahren beschrei- ben (6 SK c1)", "Spiel-, Übungs- und Wettkampfstätten situationsangemessen und sicherheitsbe- wusst nutzen (6 MK f1)"], "mk": [], "uk": []}, {"jg": 6, "std": 15, "nr": "10", "titel": "Vorbereitung auf das Turnfest", "bf": "BF/SB 5: Bewegen an Geräten – Turnen", "bf_short": "BF5", "if_": ["b", "c"], "bwk": ["eine Bewegungsverbindung aus turnerischen Grundelementen an einem ausgewählten Gerät (Boden, Barren, Reck oder Schwebebalken) demonstrieren [6 BWK 5.2]", "eine Bewegungsverbindung aus turnerischen Grundelementen an einem ausgewählten Gerät (Boden, Barren, Reck oder Schwebebalken) demonstrieren [6 BWK 5.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "Grundformen gestalterischen Bewegens (in zwei Bewegungsfeldern) benennen [6 SK b1]", "grundlegende Aufstellungsformen und Formationen benennen [6 SK b2]"], "mk": ["Grundformen gestalterischen Bewegens nach- und umgestalten [6 MK b1]", "einfache kreative Bewegungsgestaltungen entwickeln und zu einer Präsentation verbinden [6 MK b2]", "verlässlich verbale und nonverbale Unterstützung bei sportlichen Handlungssituati- onen geben und gezielt nutzen [6 MK c1]"], "uk": ["kreative, gestalterische Präsentationen anhand grundlegender Kriterien beurteilen [6 UK b1]"]}, {"jg": 6, "std": 10, "nr": "7.2", "titel": "Vertiefung von grundlegenden Erfahrungen des Volleyspiels in variablen Spiel- und Übungsformen (z.B. Kleinfeldvolleyball mit Regelvariati-", "bf": "BF/SB 7: Spielen in und mit Regelstrukturen – Sportspiele", "bf_short": "BF7", "if_": ["e"], "bwk": ["sich in einfachen spielorientierten Handlungssituationen durch Wahrnehmung von Raum, Spielgerät und Spielerinnen und Spie- lern taktisch angemessen und den Regelvereinbarungen ent- sprechend verhalten [6 BWK 7.2]", "in dem ausgewählten Mannschafts- oder Partnerspiel grundle- gende taktisch-kognitive Fähigkeiten und technisch-koordina- tive Fertigkeiten in spielerisch-situationsorientierten Handlun- gen anwenden [6 BWK 7.3] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "Merkmale für faires, kooperatives und teamorientiertes sportliches Handeln benen- nen [6 SK e1]", "sportartspezifische Vereinbarungen, Regeln und Messverfahren in unterschiedli- chen Bewegungsfeldern beschreiben [6 SK e2]"], "mk": ["selbstständig und verantwortungsvoll Spielflächen und -geräte gemeinsam auf- und abbauen [6 MK e1]", "in sportlichen Handlungssituationen grundlegende, bewegungsfeldspezifische Ver- einbarungen und Regeln dokumentieren [6 MK e2]"], "uk": ["sportliche Handlungs- und Spielsituationen hinsichtlich ausgewählter Aspekte (u.a. Einhaltung von Regeln und Vereinbarungen, Fairness im Mit- und Gegeneinander) auf grundlegendem Niveau bewerten [6 UK e1]"]}, {"jg": 6, "std": 10, "nr": "12", "titel": "Verschiedene Spiele und Spielideen kennen lernen, kriterienorientiert variieren und deren Regeln dokumentieren", "bf": "BF/SB 2: Das Spielen entdecken, Spielräume nutzen", "bf_short": "BF2", "if_": ["e"], "bwk": ["Kleine Spiele und Pausenspiele eigenverantwortlich (nach-)spie- len und situations- und kriterienorientiert gestalten [6 BWK 2.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "Merkmale für faires, kooperatives und teamorientiertes sportliches Handeln benen- nen [6 SK e1]"], "mk": ["in sportlichen Handlungssituationen grundlegende, bewegungsfeldspezifische Ver- einbarungen und Regeln dokumentieren [6 MK e2]"], "uk": ["sportliche Handlungs- und Spielsituationen hinsichtlich ausgewählter Aspekte (u.a. Einhaltung von Regeln und Vereinbarungen, Fairness im Mit- und Gegeneinander) auf grundlegendem Niveau bewerten [6 UK e1]"]}, {"jg": 6, "std": 6, "nr": "4.4", "titel": "Bewegungen im Wasser gestalten (z.B. Entwicklung einer Choreografie im Wasserballett)", "bf": "BF/SB 4: Bewegen im Wasser – Schwimmen", "bf_short": "BF4", "if_": ["b"], "bwk": ["das unterschiedliche Verhalten des Körpers bei Auftrieb, Absin- ken, Vortrieb und Rotationen (um die Längs-, Quer- und Tiefen- achse) im und unter Wasser wahrnehmen [6 BWK 4.1]", "grundlegende Fertigkeiten (Atmen, Tauchen, Gleiten, Springen) ohne Hilfsmittel im Tiefwasser zum sicheren und zielgerichteten Bewegen nutzen [6 BWK 4.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "Grundformen gestalterischen Bewegens (in zwei Bewegungsfeldern) benennen [6 SK b1]", "grundlegende Aufstellungsformen und Formationen benennen [6 SK b2]"], "mk": ["Grundformen gestalterischen Bewegens nach- und umgestalten [6 MK b1]", "einfache kreative Bewegungsgestaltungen entwickeln und zu einer Präsentation verbinden [6 MK b2]"], "uk": ["kreative, gestalterische Präsentationen anhand grundlegender Kriterien beurteilen [6 UK b1]"]}, {"jg": 6, "std": 16, "nr": "4.5", "titel": "„Brust? Nein, es geht auch anders....“ – Freistil-/rückenschwimmen als ökonomische Alternativen zum sicheren Gleiten", "bf": "BF/SB 4: Bewegen im Wasser – Schwimmen", "bf_short": "BF4", "if_": ["a", "f"], "bwk": ["eine Wechselzug- oder eine Gleichzugtechnik einschließlich Atemtechnik, Start und Wende auf technisch-koordinativ grund- legendem Niveau sicher und ausdauernd ausführen [6 BWK 4.3]", "in unterschiedlichen Situationen sicherheitsbewusst springen und tauchen [6 BWK 4.4] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "wesentliche Bewegungsmerkmale einfacher Bewegungsabläufe benennen [6 SK a2]"], "mk": ["einfache Hilfen (Hilfestellungen, Geländehilfen, Visualisierungen, akustische Signale) beim Erlernen und Üben sportlicher Bewegungen verwenden [6 MK a2]", "Spiel-, Übungs- und Wettkampfstätten situationsangemessen und sicherheitsbe- wusst nutzen [6 MK f1]"], "uk": ["einfache Bewegungsabläufe hinsichtlich der Bewegungsqualität auf grundlegendem Niveau kriteriengeleitet beurteilen [6 UK a1]", "körperliche Anstrengung anhand der Reaktionen des eigenen Körpers auf grundle- gendem Niveau gesundheitsorientiert beurteilen [6 UK f1]"]}, {"jg": 6, "std": 8, "nr": "1.2", "titel": "Schulung der konditionellen Fähigkeit Ausdauer im Schwimmsport", "bf": "BF/SB 1: Den Körper wahrnehmen und Bewegungsfähigkeit aus-", "bf_short": "BF1", "if_": ["d", "f"], "bwk": ["eine aerobe Ausdauerleistung ohne Unterbrechung im Schwim- men (15', beliebige Schwimmart, mind. 200m) und in einem weiteren Bewegungsfeld über einen je nach Sportart angemes- senen Zeitraum (z.B. Laufen 15', Aerobic 15', Radfahren 30) er- bringen [6 BWK 1.4]", "die motorischen Grundfähigkeiten (Kraft, Schnelligkeit, Ausdauer, Beweglichkeit) in unterschiedlichen Anforderungssituationen benennen [6 SK d1]", "psycho-physische Leistungsfaktoren (u.a. Anstrengungsbereitschaft, Konzentrations- fähigkeit) in unterschiedlichen Anforderungssituationen benennen [6 SK d2]", "psycho-physische Reaktionen des Körpers in sportlichen Anforderungssituationen beschreiben [6 SK d3]"], "mk": ["einfache Methoden zur Erfassung von körperlicher Leistungsfähigkeit anwenden [6 MK d1]", "Spiel-, Übungs- und Wettkampfstätten situationsangemessen und sicherheitsbe- wusst nutzen [6 MK f1]"], "uk": ["ihre individuelle Leistungsfähigkeit in unterschiedlichen sportbezogenen Situationen anhand ausgewählter Kriterien auf grundlegendem Niveau beurteilen [6 UK d1]", "körperliche Anstrengung anhand der Reaktionen des eigenen Körpers auf grundle- gendem Niveau gesundheitsorientiert beurteilen [6 UK f1]"]}], "7": [{"jg": 7, "std": 12, "nr": "10 BWK 3.1/3.3.", "titel": "Gemeinsame Vorbereitung und Durchführung eines leichtathletischen Dreikampfes", "if_": ["a", "d"], "bwk": ["Bereits erlernte leichtathletische Disziplinen auf erweiter- tem technisch- koordinativen Fertigkeitsniveau ausführen. (10 BWK 3.1)", "alternative leichtathletische Wettbewerbe (z.B. Orientie- rungslauf, Geocashing, Relativwettkämpfe, historische Dis- ziplinen) unter Berücksichtigung unterschiedlicher Zielrich- tungen durchführen (10 BWK 3.4) Bewegungsfeldübergreifende Kompetenzerwartungen"], "mk": ["Analoge und digitale Medien zur Bewegungsanalyse und Unterstützung mo- torischer Lern- und Übungsprozesse zielorientiert einsetzen. (10 MK 2a)", "Unterschiedliche Hilfen (Feedback, Hilfestellungen, Geländehilfen, Visualisie- rungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewe- gungen auswählen und verwenden. (10 MK 3a)"], "uk": ["Den Nutzen analoger und digitaler Medien zur Analyse und Unterstützung motorischer Lern- und Übungsprozesse vergleichend beurteilen. (10 UK 2a)", "Bewegungsabläufe kriteriengeleitet beurteilen (10 UK 1a)", "Die eigene und die Leistungsfähigkeit anderer in unterschiedlichen Sport und Wettkampfsituationen unter Berücksichtigung individueller Voraussetzung kriteriengeleitet beurteilen (10 UK 1 d)"]}, {"jg": 7, "std": 8, "nr": "4.3", "titel": "Spielerisch, ästhetisch, kreativ- Bewegungsgestaltung im Wasser (z.B. Synchronschwimmen)", "bf": "BF/SB 4: Bewegen im Wasser – Schwimmen", "bf_short": "BF4", "if_": ["a", "b"], "bwk": ["grundlegende Techniken und Fertigkeiten im Wasser (Schwim- men, Tauchen oder Springen) spielerisch oder ästhetisch oder kreativ zur Bewältigung unterschiedlicher Anforderungssituatio- nen im Wasser nutzen [10 BWK 4.3]", "Wählen Sie ein Element aus. Bewegungsfeldübergreifende Kompetenzerwartungen SK", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]", "ausgewählte Ausführungskriterien (Bewegungsqualität, Synchronität, Ausdruck und Körperspannung) benennen [10 SK b1]"], "mk": ["unterschiedliche Hilfen (Feedback, Hilfestellung, Geländehilfen, Visualisierungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewegungen auswäh- len und verwenden [10 MK a3]", "kreative Bewegungsgestaltungen entwickeln und zu einer Präsentation verbinden [10 MK b3]"], "uk": ["Bewegungsabläufe kriteriengeleitet beurteilen [10 UK a1]"]}, {"jg": 7, "std": 14, "nr": "4.1", "titel": "Technische und koordinative Weiterentwicklung einer Wechselzug- und einer Gleichzugschwimmart (Brust)", "bf": "BF/SB 4: Bewegen im Wasser – Schwimmen", "bf_short": "BF4", "if_": ["a"], "bwk": ["eine Wechselzug- oder eine Gleichzugtechnik einschließlich Atemtechnik, Start und Wende auf technisch-koordinativ höhe- rem Niveau sicher ausführen [10 BWK 4.1]", "Wählen Sie ein Element aus. Bewegungsfeldübergreifende Kompetenzerwartungen SK", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]"], "mk": ["grundlegende methodische Prinzipien auf das Lernen und Üben sportlicher Bewe- gungen anwenden [10 MK a1]", "unterschiedliche Hilfen (Feedback, Hilfestellung, Geländehilfen, Visualisierungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewegungen auswäh- len und verwenden [10 MK a3]"], "uk": ["Bewegungsabläufe kriteriengeleitet beurteilen [10 UK a1]"]}, {"jg": 7, "std": 18, "nr": "4.2", "titel": "Ausdauerschwimmen und Rettungsmaßnahmen zur Selbst- und Fremdrettung", "bf": "BF/SB 4: Bewegen im Wasser – Schwimmen", "bf_short": "BF4", "if_": ["d", "f"], "bwk": ["Maßnahmen und Möglichkeiten zur Selbst- und Fremdrettung sachgerecht nutzen [10 BWK 4.2]", "die für das Lernen und Üben ausgewählter Bewegungsabläufe bedeutsamen Kör- perempfindungen und Körperwahrnehmungen beschreiben [10 SK a1]", "Auswirkungen gezielten Sporttreibens auf die Gesundheit grundlegend beschreiben [10 SK f1]"], "mk": ["grundlegende methodische Prinzipien auf das Lernen und Üben sportlicher Bewe- gungen anwenden [10 MK a1]", "unterschiedliche Hilfen (Feedback, Hilfestellung, Geländehilfen, Visualisierungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewegungen auswäh- len und verwenden [10 MK a3]", "die Rahmenbedingungen und Gegebenheiten von Spiel-, Übungs- und Wettkampfsi- tuationen analysieren und diese sicherheitsbewusst gestalten [10 MK f1]"], "uk": ["Bewegungsabläufe kriteriengeleitet beurteilen [10 UK a1]"]}, {"jg": 7, "std": 10, "nr": "7.1", "titel": "Erweiterte Vertiefung des Volleyballspiels und der Grundtechniken (z.B. Kleinfeldvolleyball mit Regelvariationen und Turnierbetrieb)", "bf": "BF/SB 7: Spielen in und mit Regelstrukturen – Sportspiele", "bf_short": "BF7", "if_": ["a", "e"], "bwk": ["sportspielspezifische Handlungssituationen in unterschiedlichen Sportspielen differenziert wahrnehmen, taktisch-kognitiv ange- messen agieren und fair und mannschaftsdienlich spielen [10 BWK 7.1]", "in dem ausgewählten Mannschafts- oder Partnerspiel auf fort- geschrittenem Spielniveau taktisch-kognitive Fähigkeiten und technisch-koordinative Fertigkeiten in spielerisch-situationsori- entierten Handlungen anwenden [10 BWK 7.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]", "Kennzeichen für ein grundlegendes Wettkampfverhalten (u.a. wettkampfspezifische Regeln kennen, taktisch angemessen agieren) erläutern [10 SK e1]", "Rahmenbedingungen, Strukturmerkmale, Vereinbarungen und Regeln unterschied- licher Spiele oder Wettkampfsituationen kriteriengeleitet in ihrer Notwendigkeit und Funktion für das Gelingen sportlicher Handlungen erläutern [10 SK e2]"], "mk": ["grundlegende methodische Prinzipien auf das Lernen und Üben sportlicher Bewe- gungen anwenden [10 MK a1]", "in sportlichen Handlungssituationen unter Verwendung der vereinbarten Zeichen und Signale Schiedsrichterfunktionen übernehmen [10 MK e3]"], "uk": ["Bewegungsabläufe kriteriengeleitet beurteilen [10 UK a1]"]}, {"jg": 7, "std": 12, "nr": "7.1", "titel": "Europas beliebteste Sportart—Fußball", "if_": ["e"], "bwk": ["Sportspielspezifische Handlungssituationen in unterschied- lichen Sportspielen differenziert wahrnehmen, taktisch- kognitiv angemessen agieren und fair und mannschafts- dienlich spielen. (10 BWK 7.1) Bewegungsfeldübergreifende Kompetenzerwartungen  SK", "Kennzeichen für ein grundlegendes Wettkampfverhalten (u.a. wettkampfspezifi- sche regeln kennen, taktisch angemessen agieren) erläutern. (10 SK e1)  MK", "Vereinbarungen und Regeln für ein faires und gelingendes sportliches Handeln analysieren und kriteriengeleitet modifizieren. (10 MK e1)", "Einfache analoge und digitale Darstellungen zur Erläutern zur Erläutern von sportlichen Handlungssituationen (u.a. Spielzüge, Aufstellungsformen) verwen- den. (10 MK e2)", "In sportlichen Handlungssituationen unter Verwendung der vereinbarten Zei- chen und Signale Schiedsrichterfunktionen übernehmen. (10 MK e3)"], "mk": [], "uk": ["Das eigene sportliche Handeln sowie das sportliche Handeln anderer kriterienge- leitet im Hinblick auf ausgewählte Aspekte (u.a. Fairness, Mit- und Gegeneinan- der, Partizipation, Geschlechteraspekte) beurteilen. (10 UK e1)"]}, {"jg": 7, "std": 10, "nr": "7.3", "titel": "Von der Individual- zur Gruppentaktik – Reflektierte Erprobung individual- und gruppentaktischer Elemente zur Strukturierung des Spielauf-", "bf": "BF/SB 7: Spielen in und mit Regelstrukturen – Sportspiele", "bf_short": "BF7", "if_": ["a", "e"], "bwk": ["eine Sportspielvariante (z.B. Floorball) o. ein alternatives Mann- schafts-/Partnerspiel (z.B. Tchoukball) unter Berücksichtigung der taktisch-kognitiven u. technisch-koordinativen Herausforde- rungen regelgerecht u. situativ angemessen spielen (10 BWK 7.4]", "Rahmenbedingungen, Strukturmerkmale, Vereinbarungen und Regeln unterschied- licher Spiele oder Wettkampfsituationen kriteriengeleitet in ihrer Notwendigkeit und Funktion für das Gelingen sportlicher Handlungen erläutern [10 SK e2]"], "mk": ["einfache analoge und digitale Darstellungen zur Erläuterung von sportlichen Hand- lungssituationen (u.a. Spielzüge, Aufstellungsformen) verwenden [10 MK e2]"], "uk": ["das eigene sportliche Handeln sowie das sportliche Handeln anderer kriteriengelei- tet im Hinblick auf ausgewählte Aspekte (u.a. Fairness, Mit- und Gegeneinander, Partizipation, Geschlechteraspekte) beurteilen [10 UK e1]"]}, {"jg": 7, "std": 14, "nr": "9.2", "titel": "Zweikämpfe und kooperative Kämpfe in variablen Herausforderungssituationen (z.B. Ringen)", "bf": "BF/SB 9: Ringen und Kämpfen - Zweikampfsport", "bf_short": "BF9", "if_": ["e", "f"], "bwk": ["Grundlegende, normgebundene, technisch-koordinative Fertig- keiten (z.B. Haltegriffe und Befreiungen, Falltechniken und kon- trolliertes Werfen) und taktisch-kognitive Fähigkeiten (z.B. kon- tern, kombinieren, fintieren) beim Ringen und Kämpfen im Stand und am Boden anwenden. [10 BWK 9.1]", "In unterschiedlichen Zweikampfhandlungen situationsange- passt, regelgerecht und fair miteinander kämpfen [10 BWK 9.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "Rahmenbedingungen, Strukturmerkmale, Vereinbarungen und Regeln unterschied- licher Spiele und Wettkampfsituationen kriteriengeleitet in ihrer Notwendigkeit und Funktion für das Gelingen sportlicher Handlungen erläutern."], "mk": ["In sportlichen Handlungssituationen unter Verwendung der vereinbarten Zeichen und Signale Schiedsrichterfunktionen übernehmen.", "Die Rahmenbedingungen und Gegebenheiten von Spiel-, Übungs- und Wettkampfsi- tuationen analysieren und diese sicherheitsbewusst gestalten."], "uk": ["Das eigene sportliche Handeln sowie das sportliche Handeln anderer kriteriengelei- tet im Hinblick auf ausgewählte Aspekte (u.a. Fairness, Mit- und Gegeneinander, Partizipation, Geschlechteraspekte) beurteilen."]}], "8": [{"jg": 8, "std": 15, "nr": "3.1", "titel": "Höher, schneller, weiter – Leichtathletisches Training unter Verwendung unterschiedlicher Hilfen zum Ausbau neuer und bekannter Bewe-", "bf": "BF/SB 3: Laufen, Springen, Werfen – Leichtathletik", "bf_short": "BF3", "if_": ["a", "d"], "bwk": ["eine neu erlernte leichtathletische Disziplin (z.B. Kugelstoß, Hochsprung) in der Grobform ausführen [10 BWK 3.2]", "alternative leichtathletische Wettbewerbe (z.B. Orientierungs- lauf, Geocashing, Relativwettkämpfe, historische Disziplinen) unter Berücksichtigung unterschiedlicher Zielrichtungen durch- führen [10 BWK 3.4] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]", "koordinative Anforderungen von Bewegungsaufgaben benennen [10 SK d3]"], "mk": ["grundlegende methodische Prinzipien auf das Lernen und Üben sportlicher Bewe- gungen anwenden [10 MK a1]", "unterschiedliche Hilfen (Feedback, Hilfestellung, Geländehilfen, Visualisierungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewegungen auswäh- len und verwenden [10 MK a3]"], "uk": ["den Einsatz unterschiedlicher Hilfen (Feedback, Hilfestellungen, Geländehilfen, Visu- alisierungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewe- gungen kriteriengeleitet bewerten [10 UK a3]"]}, {"jg": 8, "std": 15, "nr": "5.1", "titel": "Springen, fliegen, Landen, Überwinden – Parkour als turnerische Alternative", "bf": "BF/SB 5: Bewegen an Geräten – Turnen", "bf_short": "BF5", "if_": ["a", "c"], "bwk": ["turnerische Sicherheits- und Hilfestellungen situationsbezogen wahrnehmen und sachgerecht ausführen [10 BWK 5.3]", "turnerische Grundelemente auf technisch-koordinativ grundle- gendem Niveau unter Berücksichtigung eines weiteren Turnge- räts demonstrieren [10 BWK 5.1]", "eine selbst entwickelte akrobatische Gruppengestaltung präsen- tieren [10 BWK 5.2]", "die für das Lernen und Üben ausgewählter Bewegungsabläufe bedeutsamen Kör- perempfindungen und Körperwahrnehmungen beschreiben [10 SK a1]", "unterschiedliche Motive (u.a. Risiko erleben) sportlichen Handelns in Wagnissituati- onen erläutern [10 SK c1]", "emotionale Signale in sportlichen Wagnissituationen beschreiben [10 SK c2]", "die Herausforderungen in sportlichen Handlungssituationen im Hinblick auf die An- forderung, das eigene Können und mögliche Gefahren erläutern [10 SK c3]"], "mk": ["grundlegende methodische Prinzipien auf das Lernen und Üben sportlicher Bewe- gungen anwenden [10 MK a1]", "Strategien zum Umgang mit Emotionen in sportlichen Wagnissituationen (u.a. zur Bewältigung von Angstsituationen) anwenden [10 MK c1]", "Herausforderungen in sportlichen Handlungssituationen angepasst an das individu- elle motorische Können gezielt verändern [10 MK c2]"], "uk": ["komplexe sportliche Wagnissituationen für sich und andere unter Berücksichtigung des eigenen Könnens und möglicher Gefahrenmomente situativ beurteilen und sich begründet für oder gegen deren Bewältigung entscheiden [10 UK c1]"]}, {"jg": 8, "std": 15, "nr": "6.1", "titel": "Zusammen ist man weniger allein – Gestaltung und Präsentation einer tänzerischen Choreografie in Partner- oder Gruppenarbeit zur Erwei-", "bf": "BF/SB 6: Gestalten, Tanzen, Darstellen – Gymnastik/ Tanz, Bewe-", "bf_short": "BF6", "if_": ["b", "e"], "bwk": ["eine selbstständig um- und neugestaltete tänzerische Komposi- tion einer ausgewählten Tanzrichtung (z.B. Hip-Hop, Jumpstyle) allein oder in der Gruppe präsentieren [10 BWK 6.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "ausgewählte Ausführungskriterien (Bewegungsqualität, Synchronität, Ausdruck und Körperspannung) benennen [10 SK b1]", "das Gestaltungskriterium Raum (Aufstellungsformen, Raumwege, Raumebenen und Bewegungsrichtungen) beschreiben [10 SK b2]"], "mk": ["Bewegungsgestaltungen allein oder in der Gruppe auch mit Hilfe digitaler Medien nach-, um- und neugestalten [10 MK b2]", "kreative Bewegungsgestaltungen entwickeln und zu einer Präsentation verbinden [10 MK b3]"], "uk": ["gestalterische Präsentationen auch unter Verwendung digitaler Medien kriterienge- leitet (u.a. Schwierigkeit, Kreativität, Nutzung des Raums, Wirkung auf den Zu- schauer) beurteilen [10 UK b2]", "die Ausführungs- und Bewegungsqualität bei sich und anderen nach vorgegebenen Kriterien beurteilen [10 UK b1]"]}, {"jg": 8, "std": 15, "nr": "7.1", "titel": "Wiederholung und Vertiefung der erlernten Bewegungskompetenzen des Volleyballspiels", "bf": "BF/SB 7: Spielen in und mit Regelstrukturen – Sportspiele", "bf_short": "BF7", "if_": ["a", "e"], "bwk": ["sportspielspezifische Handlungssituationen in unterschiedlichen Sportspielen differenziert wahrnehmen, taktisch-kognitiv ange- messen agieren und fair und mannschaftsdienlich spielen [10 BWK 7.1]", "in dem ausgewählten Mannschafts- oder Partnerspiel auf fort- geschrittenem Spielniveau taktisch-kognitive Fähigkeiten und technisch-koordinative Fertigkeiten in spielerisch-situationsori- entierten Handlungen anwenden [10 BWK 7.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]", "Kennzeichen für ein grundlegendes Wettkampfverhalten (u.a. wettkampfspezifische Regeln kennen, taktisch angemessen agieren) erläutern [10 SK e1]", "Rahmenbedingungen, Strukturmerkmale, Vereinbarungen und Regeln unterschied- licher Spiele oder Wettkampfsituationen kriteriengeleitet in ihrer Notwendigkeit und Funktion für das Gelingen sportlicher Handlungen erläutern [10 SK e2]"], "mk": ["grundlegende methodische Prinzipien auf das Lernen und Üben sportlicher Bewe- gungen anwenden [10 MK a1]", "in sportlichen Handlungssituationen unter Verwendung der vereinbarten Zeichen und Signale Schiedsrichterfunktionen übernehmen [10 MK e3]"], "uk": ["Bewegungsabläufe kriteriengeleitet beurteilen [10 UK a1]"]}, {"jg": 8, "std": 15, "nr": "7.2", "titel": "Förderung eines Fair-Play-Bewusstseins am Beispiel von Konkurrenz- und Kooperationssituationen im Sportspiel Basketball", "bf": "BF/SB 7: Spielen in und mit Regelstrukturen – Sportspiele", "bf_short": "BF7", "if_": ["e", "d"], "bwk": ["sportspielspezifische Handlungssituationen in unterschiedlichen Sportspielen differenziert wahrnehmen, taktisch-kognitiv ange- messen agieren und fair und mannschaftsdienlich spielen [10 BWK 7.1]", "Kennzeichen für ein grundlegendes Wettkampfverhalten (u.a. wettkampfspezifische Regeln kennen, taktisch angemessen agieren) erläutern [10 SK e1]"], "mk": ["in sportlichen Handlungssituationen unter Verwendung der vereinbarten Zeichen und Signale Schiedsrichterfunktionen übernehmen [10 MK e3]"], "uk": ["die eigene und die Leistungsfähigkeit anderer in unterschiedlichen Sport- und Wett- kampfsituationen unter Berücksichtigung individueller Voraussetzungen kriterienge- leitet beurteilen [10 UK d1]"]}, {"jg": 8, "std": 15, "nr": "8.1", "titel": "Gleiten, Fahren, Rollen – Koordinative und Konditionelle Vorbereitung der Abschlussfahrten zu Beginn der Klasse 9", "bf": "BF/SB 8: Gleiten, Fahren, Rollen – Rollsport/ Bootssport/Winter-", "bf_short": "BF8", "if_": ["a", "c"], "bwk": ["sich in komplexen Anforderungssituationen unter Wahrneh- mung von Material, Geschwindigkeit und Umwelt mit einem fahrenden oder rollenden oder gleitenden Sportgerät dyna- misch und situationsangemessen fortbewegen [10 BWK 8.1]", "gerätespezifische, technisch-koordinative Fertigkeiten unter Be- rücksichtigung unterschiedlicher Zielsetzungen (ästhetisch, ge- stalterisch, spielerisch oder wettkampfbezogen) sicher und kon- trolliert demonstrieren [10 BWK 8.2]", "die für das Lernen und Üben ausgewählter Bewegungsabläufe bedeutsamen Kör- perempfindungen und Körperwahrnehmungen beschreiben [10 SK a1]", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]", "emotionale Signale in sportlichen Wagnissituationen beschreiben [10 SK c2]"], "mk": ["Herausforderungen in sportlichen Handlungssituationen angepasst an das individu- elle motorische Können gezielt verändern [10 MK c2]", "Strategien zum Umgang mit Emotionen in sportlichen Wagnissituationen (u.a. zur Bewältigung von Angstsituationen) anwenden [10 MK c1]"], "uk": []}, {"jg": 8, "std": 15, "nr": "Wählen Sie ein Ele-", "titel": "Fitnessstudio Sporthalle – mit dem Körpergewicht und kleinen Gewichten gesundheitsorientiert arbeiten", "bf": "BF/SB 1: Den Körper wahrnehmen und Bewegungsfähigkeit aus-", "bf_short": "BF1", "if_": ["a", "f"], "bwk": ["sich funktional und wahrnehmungsorientiert - allgemein und sportartspezifisch - aufwärmen [10 BWK 1.1]", "ein gesund-funktionales Muskeltraining (z.B. als Zirkeltraining) unter Berücksichtigung ausgewählter Zielsetzungen (u.a. Ver- besserung der Konzentrationsfähigkeit) kriterienorientiert ent- wickeln und spielen [10 BWK 1.3]", "die für das Lernen und Üben ausgewählter Bewegungsabläufe bedeutsamen Kör- perempfindungen und Körperwahrnehmungen beschreiben [10 SK a1]", "Auswirkungen gezielten Sporttreibens auf die Gesundheit grundlegend beschreiben [10 SK f1]", "Prinzipien einer sachgerechten allgemeinen und sportartspezifischen Vorbereitung auf sportliches Bewegen im Hinblick auf die damit verbundenen unterschiedlichen psycho-physischen Belastungen erläutern [10 SK f2]"], "mk": ["analoge und digitale Medien zur Bewegungsanalyse und Unterstützung motorischer Lern- und Übungsprozesse zielorientiert einsetzen [10 MK a2]"], "uk": ["gesundheitliche Auswirkungen sportlichen Handelns unter besonderer Berücksichti- gung medial vermittelter Fitnesstrends und Körperideale auch unter Geschlech- teraspekten kritisch beurteilen [10 UK f1]"]}], "9": [{"jg": 9, "std": 20, "nr": "3.1", "titel": "„Jetzt wollen wir was erreichen!“ – Vorbereitung eines leichtathletischen Wettbewerbs und Trainingsgestaltung zur Erbringung einer Ausdau-", "bf": "BF/SB 3: Laufen, Springen, Werfen – Leichtathletik", "bf_short": "BF3", "if_": ["d", "a"], "bwk": ["einen leichtathletischen Wettbewerb einzeln oder in der Gruppe unter Berücksichtigung angemessenen Wettkampfver- haltens durchführen [10 BWK 3.3]", "bereits erlernte leichtathletische Disziplinen auf erweitertem technisch-koordinativen Fertigkeitsniveau ausführen [10 BWK 3.1] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "die für das Lernen und Üben ausgewählter Bewegungsabläufe bedeutsamen Kör- perempfindungen und Körperwahrnehmungen beschreiben [10 SK a1]", "grundlegende Methoden und Prinzipien zur Verbesserung motorischer Grundfähig- keiten (Ausdauer und Kraft) beschreiben [10 SK d1]", "ausgewählte Belastungsgrößen (u.a. Intensität, Umfang, Dichte, Dauer) zur Gestal- tung eines Trainings auf grundlegendem Niveau erläutern [10 SK d2]"], "mk": ["sportliche Leistungen analog oder digital erfassen und anhand von graphischen Dar- stellungen und/oder Diagrammen dokumentieren [10 MK d2]", "unterschiedliche Hilfen (Feedback, Hilfestellung, Geländehilfen, Visualisierungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewegungen auswäh- len und verwenden [10 MK a3]", "einen individualisierten Trainingsplan aus vorgegebenen Einzelelementen zur Ver- besserung einer ausgewählten motorischen Grundfähigkeit zusammenstellen [10 MK d1]"], "uk": ["die Leistungsbegriff in unterschiedlichen sportlichen Handlungssituationen unter Berücksichtigung unterschiedlicher Bezugsgrößen (u.a. soziale, personale, kriteriale Bezugsnormen und Geschlechteraspekte) kritisch reflektieren [10 UK d2]", "die eigene und die Leistungsfähigkeit anderer in unterschiedlichen Sport- und Wett- kampfsituationen unter Berücksichtigung individueller Voraussetzungen kriterienge- leitet beurteilen [10 UK d1]", "den Nutzen analoger und digitaler Medien zur Analyse und Unterstützung motori- scher Lern- und Übungsprozesse vergleichend beurteilen [10 UK a2]"]}, {"jg": 9, "std": 20, "nr": "7.1", "titel": "Das Rückschlagspiel Tischtennis – Erarbeitung, Analyse und Reflexion der Funktion von unterschiedlichen Techniken und Fertigkeiten in", "bf": "BF/SB 7: Spielen in und mit Regelstrukturen – Sportspiele", "bf_short": "BF7", "if_": ["a"], "bwk": ["in dem ausgewählten Mannschafts- oder Partnerspiel auf fort- geschrittenem Spielniveau taktisch-kognitive Fähigkeiten und technisch-koordinative Fertigkeiten in spielerisch-situationsori- entierten Handlungen anwenden [10 BWK 7.2]", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]"], "mk": ["grundlegende methodische Prinzipien auf das Lernen und Üben sportlicher Bewe- gungen anwenden [10 MK a1]"], "uk": ["Bewegungsabläufe kriteriengeleitet beurteilen [10 UK a1]"]}, {"jg": 9, "std": 20, "nr": "7.2", "titel": "Weiterentwicklung der technischen und taktischen Kompetenzen hin zum Spiel 6 gegen 6", "bf": "BF/SB 7: Spielen in und mit Regelstrukturen – Sportspiele", "bf_short": "BF7", "if_": ["a", "e"], "bwk": ["sportspielspezifische Handlungssituationen in unterschiedlichen Sportspielen differenziert wahrnehmen, taktisch-kognitiv ange- messen agieren und fair und mannschaftsdienlich spielen [10 BWK 7.1]", "in dem ausgewählten Mannschafts- oder Partnerspiel auf fort- geschrittenem Spielniveau taktisch-kognitive Fähigkeiten und technisch-koordinative Fertigkeiten in spielerisch-situationsori- entierten Handlungen anwenden [10 BWK 7.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]", "Kennzeichen für ein grundlegendes Wettkampfverhalten (u.a. wettkampfspezifische Regeln kennen, taktisch angemessen agieren) erläutern [10 SK e1]", "Rahmenbedingungen, Strukturmerkmale, Vereinbarungen und Regeln unterschied- licher Spiele oder Wettkampfsituationen kriteriengeleitet in ihrer Notwendigkeit und Funktion für das Gelingen sportlicher Handlungen erläutern [10 SK e2]"], "mk": ["unterschiedliche Hilfen (Feedback, Hilfestellung, Geländehilfen, Visualisierungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewegungen auswäh- len und verwenden [10 MK a3]", "in sportlichen Handlungssituationen unter Verwendung der vereinbarten Zeichen und Signale Schiedsrichterfunktionen übernehmen [10 MK e3]"], "uk": ["den Einsatz unterschiedlicher Hilfen (Feedback, Hilfestellungen, Geländehilfen, Visu- alisierungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewe- gungen kriteriengeleitet bewerten [10 UK a3]"]}, {"jg": 9, "std": 20, "nr": "6.1", "titel": "Tanzend fitter werden – Einen europäischen Tanz/Fitnesstanz im Hinblick auf die Auswirkungen auf die Gesundheit erlernen, bewerten und", "bf": "BF/SB 6: Gestalten, Tanzen, Darstellen – Gymnastik/ Tanz, Bewe-", "bf_short": "BF6", "if_": ["b", "f"], "bwk": ["eine selbstständig um- und neugestaltete gymnastische Bewe- gungsgestaltung ohne oder mit ausgewählten Handgeräten (Ball, Reifen, Seil, Keule oder Band) oder Alltagsmaterialien al- lein oder in der Gruppe präsentieren [10 BWK 6.1]", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]", "Auswirkungen gezielten Sporttreibens auf die Gesundheit grundlegend beschreiben [10 SK f1]"], "mk": ["analoge und digitale Medien zur Bewegungsanalyse und Unterstützung motorischer Lern- und Übungsprozesse zielorientiert einsetzen [10 MK a2]", "unterschiedliche Ausgangspunkte (Texte, Musik oder Themen) als Anlass für Gestal- tungen - allein oder in der Gruppe - nutzen [10 MK b1]"], "uk": ["den Nutzen analoger und digitaler Medien zur Analyse und Unterstützung motori- scher Lern- und Übungsprozesse vergleichend beurteilen [10 UK a2]", "die Ausführungs- und Bewegungsqualität bei sich und anderen nach vorgegebenen Kriterien beurteilen [10 UK b1]"]}, {"jg": 9, "std": 20, "nr": "2.2", "titel": "Einführung in ein Endzonenspiel unter besonderer Berücksichtigung der Entwicklung von spielerischen Fähigkeiten und taktischem Grund-", "bf": "BF/SB 2: Das Spielen entdecken, Spielräume nutzen", "bf_short": "BF2", "if_": ["a", "e"], "bwk": ["eigene Spiele und Spiele aus anderen Kulturen unter Berücksich- tigung ausgewählter Strukturmerkmale (z.B. Glück, Strategie und Geschicklichkeit) kriterienorientiert entwickeln und spielen [10 BWK 2.2]", "Ein Endzonenspiel (z.B. Ultimate Frisbee, Rugby, Flag-Football) unter Berücksichtigung der taktische-kognitiven u. technisch-ko- ordinativen Herausforderungen regelgerecht und situativ ange- messen spielen [10 BWK 7.3]", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]"], "mk": ["analoge und digitale Medien zur Bewegungsanalyse und Unterstützung motorischer Lern- und Übungsprozesse zielorientiert einsetzen [10 MK a2]"], "uk": ["das eigene sportliche Handeln sowie das sportliche Handeln anderer kriteriengelei- tet im Hinblick auf ausgewählte Aspekte (u.a. Fairness, Mit- und Gegeneinander, Partizipation, Geschlechteraspekte) beurteilen [10 UK e1]"]}], "10": [{"jg": 10, "std": 15, "nr": "4.2", "titel": "Bergen, Beleben, Begleiten – Befreiungsgriffe, Bergungstechniken und Notfallroutinen (Rettungsschwimmen)", "bf": "BF/SB 4: Bewegen im Wasser – Schwimmen", "bf_short": "BF4", "if_": ["a", "f"], "bwk": ["Maßnahmen und Möglichkeiten zur Selbst- und Fremdrettung sachgerecht nutzen [10 BWK 4.2]", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]", "Auswirkungen gezielten Sporttreibens auf die Gesundheit grundlegend beschreiben [10 SK f1]"], "mk": ["unterschiedliche Hilfen (Feedback, Hilfestellung, Geländehilfen, Visualisierungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewegungen auswäh- len und verwenden [10 MK a3]", "Muster des eigenen Bewegungsverhaltens (im Alltag und in sportlichen Handlungs- situationen) auch unter Nutzung digitaler Medien erfassen und im Hinblick auf den gesundheitlichen Nutzen und mögliche Risiken analysieren [10 MK f2]"], "uk": ["Bewegungsabläufe kriteriengeleitet beurteilen [10 UK a1]"]}, {"jg": 10, "std": 15, "nr": "4.1", "titel": "Gleichzug mal anders – Kennenlernen des Delphinstils und Weiterentwicklung der erlernten Techniken", "bf": "BF/SB 4: Bewegen im Wasser – Schwimmen", "bf_short": "BF4", "if_": ["a"], "bwk": ["grundlegende Techniken und Fertigkeiten im Wasser (Schwim- men, Tauchen oder Springen) spielerisch oder ästhetisch oder kreativ zur Bewältigung unterschiedlicher Anforderungssituatio- nen im Wasser nutzen [10 BWK 4.3]", "Wählen Sie ein Element aus. Bewegungsfeldübergreifende Kompetenzerwartungen SK", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]"], "mk": ["unterschiedliche Hilfen (Feedback, Hilfestellung, Geländehilfen, Visualisierungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewegungen auswäh- len und verwenden [10 MK a3]"], "uk": ["Bewegungsabläufe kriteriengeleitet beurteilen [10 UK a1]"]}, {"jg": 10, "std": 10, "nr": "4.3", "titel": "Kleine Spiele im Wasser (z.B. Wasserball)", "bf": "BF/SB 4: Bewegen im Wasser – Schwimmen", "bf_short": "BF4", "if_": ["e"], "bwk": ["Maßnahmen und Möglichkeiten zur Selbst- und Fremdrettung sachgerecht nutzen [10 BWK 4.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "Rahmenbedingungen, Strukturmerkmale, Vereinbarungen und Regeln unterschied- licher Spiele oder Wettkampfsituationen kriteriengeleitet in ihrer Notwendigkeit und Funktion für das Gelingen sportlicher Handlungen erläutern [10 SK e2]"], "mk": ["Vereinbarungen und Regeln für ein faires und gelingendes Handeln analysieren und kriteriengeleitet modifizieren [10 MK e1]"], "uk": ["das eigene sportliche Handeln sowie das sportliche Handeln anderer kriteriengelei- tet im Hinblick auf ausgewählte Aspekte (u.a. Fairness, Mit- und Gegeneinander, Partizipation, Geschlechteraspekte) beurteilen [10 UK e1]"]}, {"jg": 10, "std": 10, "nr": "7.1", "titel": "Spieltaktische Vertiefung", "bf": "BF/SB 7: Spielen in und mit Regelstrukturen – Sportspiele", "bf_short": "BF7", "if_": ["a", "e"], "bwk": ["sportspielspezifische Handlungssituationen in unterschiedlichen Sportspielen differenziert wahrnehmen, taktisch-kognitiv ange- messen agieren und fair und mannschaftsdienlich spielen [10 BWK 7.1]", "in dem ausgewählten Mannschafts- oder Partnerspiel auf fort- geschrittenem Spielniveau taktisch-kognitive Fähigkeiten und technisch-koordinative Fertigkeiten in spielerisch-situationsori- entierten Handlungen anwenden [10 BWK 7.2] Bewegungsfeldübergreifende Kompetenzerwartungen SK", "für ausgewählte Bewegungstechniken die relevanten Bewegungsmerkmale bennen und einfache grundlegende Zusammenhänge von Aktionen und Effekten erläutern [10 SK a2]", "Rahmenbedingungen, Strukturmerkmale, Vereinbarungen und Regeln unterschied- licher Spiele oder Wettkampfsituationen kriteriengeleitet in ihrer Notwendigkeit und Funktion für das Gelingen sportlicher Handlungen erläutern [10 SK e2]", "Kennzeichen für ein grundlegendes Wettkampfverhalten (u.a. wettkampfspezifische Regeln kennen, taktisch angemessen agieren) erläutern [10 SK e1]"], "mk": ["einfache analoge und digitale Darstellungen zur Erläuterung von sportlichen Hand- lungssituationen (u.a. Spielzüge, Aufstellungsformen) verwenden [10 MK e2]", "in sportlichen Handlungssituationen unter Verwendung der vereinbarten Zeichen und Signale Schiedsrichterfunktionen übernehmen [10 MK e3]"], "uk": ["den Einsatz unterschiedlicher Hilfen (Feedback, Hilfestellungen, Geländehilfen, Visu- alisierungen, akustische Signale) beim Erlernen und Verbessern sportlicher Bewe- gungen kriteriengeleitet bewerten [10 UK a3]"]}, {"jg": 10, "std": 10, "nr": "7.2", "titel": "Das Sportspiel Handball im schulischen Kontext – Entwicklung und Erprobung von Variationsmöglichkeiten im Bezug auf heterogene Leis-", "bf": "BF/SB 7: Spielen in und mit Regelstrukturen – Sportspiele", "bf_short": "BF7", "if_": ["d", "e"], "bwk": ["sportspielspezifische Handlungssituationen in unterschiedlichen Sportspielen differenziert wahrnehmen, taktisch-kognitiv ange- messen agieren und fair und mannschaftsdienlich spielen [10 BWK 7.1]", "Rahmenbedingungen, Strukturmerkmale, Vereinbarungen und Regeln unterschied- licher Spiele oder Wettkampfsituationen kriteriengeleitet in ihrer Notwendigkeit und Funktion für das Gelingen sportlicher Handlungen erläutern [10 SK e2]"], "mk": ["Vereinbarungen und Regeln für ein faires und gelingendes Handeln analysieren und kriteriengeleitet modifizieren [10 MK e1]"], "uk": ["die Leistungsbegriff in unterschiedlichen sportlichen Handlungssituationen unter Berücksichtigung unterschiedlicher Bezugsgrößen (u.a. soziale, personale, kriteriale Bezugsnormen und Geschlechteraspekte) kritisch reflektieren [10 UK d2]"]}, {"jg": 10, "std": 10, "nr": "7.3", "titel": "Vom Miteinander zum Gegeneinander – Problemorientierte Erarbeitung technischer und taktischer Möglichkeiten im Badminton in spiel-", "bf": "BF/SB 7: Spielen in und mit Regelstrukturen – Sportspiele", "bf_short": "BF7", "if_": ["a", "e"], "bwk": ["in dem ausgewählten Mannschafts- oder Partnerspiel auf fort- geschrittenem Spielniveau taktisch-kognitive Fähigkeiten und technisch-koordinative Fertigkeiten in spielerisch-situationsori- entierten Handlungen anwenden [10 BWK 7.2]", "Kennzeichen für ein grundlegendes Wettkampfverhalten (u.a. wettkampfspezifische Regeln kennen, taktisch angemessen agieren) erläutern [10 SK e1]"], "mk": ["Vereinbarungen und Regeln für ein faires und gelingendes Handeln analysieren und kriteriengeleitet modifizieren [10 MK e1]"], "uk": ["die Leistungsbegriff in unterschiedlichen sportlichen Handlungssituationen unter Berücksichtigung unterschiedlicher Bezugsgrößen (u.a. soziale, personale, kriteriale Bezugsnormen und Geschlechteraspekte) kritisch reflektieren [10 UK d2]"]}]}, "Deutsch": {}};
+const PH_UB=["Übergeordnetes Vorhaben","Verortung","Gegenstand→Thema","Kernanliegen","Teillernziele","Kohärenz","Mittagessen-Test"];
+const PH_NORM=["Lerngruppe & Ziel","Stundenstruktur","Reflexionsfragen"];
+const VP_PH=["Einstieg","Aufwärmen","Gelenkstelle","Erarbeitung","Reflexion I","Reflexion II","Ausklang"];
+const LG_CHIPS={size:["< 20 SuS","20–28 SuS","> 28 SuS"],leistung:["leistungshomogen","leistungsheterogen","überwiegend leistungsstark","überwiegend leistungsschwach"],beson:["I-SuS vorhanden","DaZ-SuS","Förderbedarf","gutes Sozialklima","herausforderndes Klassenklima","hohe Motivation","Vorerfahrungen im Thema"]};
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let sessions=[], activeId=null;
+const S=()=>sessions.find(s=>s.id===activeId);
+const mkVP=()=>VP_PH.map(p=>({phase:p,g:"",o:"",k:""}));
+
+// Current step index (0-based through STEPS array)
+let curStep=0;
+
+// ═══════════════════════════════════════════════════
+// STEPS DEFINITION
+// Each step: {id, eyebrow, question, sub, render(s), canNext(s), onNext(s)}
+// ═══════════════════════════════════════════════════
+const STEPS=[
+  // 0: Art der Stunde
+  {
+    id:"typ", eyebrow:"Schritt 1", question:"Was planst du heute?",
+    sub:"Wähle die Art der Stunde.",
+    render(s){
+      return `<div class="step-options">
+        <div class="step-option ${s.typ==='normal'?'sel':''}" onclick="pick('typ','normal',this)">
+          <span class="step-opt-icon">📖</span>
+          <div><div class="step-opt-label">Normale Unterrichtsstunde</div><div class="step-opt-sub">Ausbildungsunterricht — kompakte Planung in 3 Schritten</div></div>
+        </div>
+        <div class="step-option ${s.typ==='ub'?'sel':''}" onclick="pick('typ','ub',this)">
+          <span class="step-opt-icon">🎯</span>
+          <div><div class="step-opt-label">Unterrichtsbesuch (UB)</div><div class="step-opt-sub">Vollständige 7-Phasen-Planung mit Kernanliegen</div></div>
+        </div>
+      </div>`;
+    },
+    canNext(s){return !!s.typ;}
+  },
+  // 1: UB-Nummer (nur wenn UB) — wird übersprungen bei normal
+  {
+    id:"ubnr", eyebrow:"Schritt 2", question:"Welcher Unterrichtsbesuch ist das?",
+    sub:"Das beeinflusst wie kritisch der Agent nachfragt.",
+    skip(s){return s.typ!=='ub';},
+    render(s){
+      return `<div class="step-grid step-grid-6">${[1,2,3,4,5,6].map(n=>
+        `<div class="step-option ${s.ubNr===n?'sel':''}" onclick="pickN('ubNr',${n},this)">
+          <div class="step-opt-label">${n}.</div>
+          <div class="step-opt-sub">UB</div>
+        </div>`).join("")}</div>`;
+    },
+    canNext(s){return true;},
+    onNext(s){if(!s.ubNr)s.ubNr=1;}
+  },
+  // 2: Entwicklungsziel
+  {
+    id:"dg", eyebrow:"Schritt 3", question:"Was ist dein aktuelles Entwicklungsziel?",
+    sub:"Der Agent wird darauf besonders achten und am Ende Feedback geben.",
+    render(s){
+      return `<textarea class="step-textarea" id="dg-ta" rows="3" placeholder="z.B. Gesprächs- und Reflexionsphasen qualitativ verbessern — offene Fragen, SuS-aktivierend, ausreichend Denkzeit…">${esc(s.dg||"")}</textarea>`;
+    },
+    canNext(s){return true;},
+    onNext(s){s.dg=document.getElementById("dg-ta")?.value.trim()||s.dg||"";}
+  },
+  // 3: Fach
+  {
+    id:"fach", eyebrow:"Schritt 4", question:"Welches Fach planst du?",
+    sub:"Der passende Kernlehrplan NRW wird automatisch geladen.",
+    render(s){
+      return `<div class="step-grid step-grid-3">${Object.entries(FACH_DATA).map(([f,d])=>
+        `<div class="step-option ${s.fach===f?'sel':''}" onclick="pickFach('${f}',this)" style="--fc:${d.color}${s.fach===f?';background:'+d.bg:''}">
+          <div class="step-opt-icon">${d.emoji}</div>
+          <div class="step-opt-label">${f}</div>
+          <div class="step-opt-sub">${d.sub}</div>
+        </div>`).join("")}</div>`;
+    },
+    canNext(s){return !!s.fach;}
+  },
+  // 4: Jahrgangsstufe
+  {
+    id:"jgst", eyebrow:"Schritt 5", question:"Welche Jahrgangsstufe unterrichtest du?",
+    sub:"Die UVs aus deinem SILP werden gefiltert.",
+    render(s){
+      return `<div class="step-grid step-grid-6">${["5","6","7","8","9","10"].map(j=>
+        `<div class="step-option ${s.jgst===j?'sel':''}" onclick="pickJg('${j}',this)">
+          <div class="step-opt-label">${j}</div>
+          <div class="step-opt-sub">Klasse</div>
+        </div>`).join("")}</div>`;
+    },
+    canNext(s){return !!s.jgst;}
+  },
+  // 5: SILP upload
+  {
+    id:"silp", eyebrow:"Schritt 6", question:"Unterrichtsvorhaben",
+    sub:"",
+    render(s){
+      const hasUVs=s.uvs&&s.uvs.length>0;
+      const hasEmbedded=!!(UV_DATA[s.fach]&&UV_DATA[s.fach][s.jgst]&&UV_DATA[s.fach][s.jgst].length);
+      return `
+        ${!hasUVs?`
+          ${hasEmbedded?`
+            <div style="padding:.6rem 0 .8rem;text-align:center;">
+              <div style="font-size:.82rem;color:var(--text2);font-weight:500;">⚡ SILP eingebettet — lade automatisch…</div>
+            </div>`:
+          `<div class="upload-zone" id="upload-zone" onclick="document.getElementById('silp-file').click()" style="margin-bottom:.8rem;">
+            <div class="upload-icon">📄</div>
+            <div class="upload-title">SILP als PDF oder TXT hochladen</div>
+            <div class="upload-sub">Klicken oder hierher ziehen</div>
+          </div>
+          <input type="file" id="silp-file" accept=".pdf,.txt,.md" style="display:none" onchange="handleSILP(this)">
+          <div id="silp-load" class="hidden"><div class="load-wrap"><div class="load-bar-outer"><div class="load-bar-inner"></div></div><div class="load-text" id="silp-load-text">Lade…</div><div class="load-sub" id="silp-load-sub"></div></div></div>`}
+          <div id="silp-status" class="step-status"></div>
+        `:''}
+        ${hasUVs?`<div style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:.35rem;">${s.uvs.map(uv=>`
+          <div class="step-option ${s.selUV&&s.selUV._uid===uv._uid?'sel':''}" onclick="stepSelUV('${uv._uid}')" style="flex-direction:column;align-items:flex-start;gap:.1rem;padding:.7rem .9rem;">
+            <div class="step-opt-label" style="font-size:.83rem;line-height:1.4;">${esc(uv.titel)}</div>
+            <div class="step-opt-sub">${esc(uv.bf||'')}${uv.std?' · '+uv.std+' Std.':''}</div>
+          </div>`).join("")}</div>`:''}`;
+    },
+    canNext(s){return true;}, // can skip SILP
+    onNext(s){/* handled by stepSelUV */}
+  },
+  // 6: Kompetenzen (nur wenn UV gewählt)
+  {
+    id:"comps", eyebrow:"Schritt 7", question:"Welche Kompetenzen planst du?",
+    sub:"Wähle die relevanten Kompetenzen aus deinem SILP.",
+    skip(s){return !s.selUV;},
+    render(s){
+      const uv=s.selUV; if(!uv)return"";
+      const cats=[["BWK","bwk",uv.bwk||[]],["MK","mk",uv.mk||[]],["UK","uk",uv.uk||[]]];
+      let html="";
+      cats.forEach(([l,k,items])=>{
+        if(!items.length)return;
+        html+=`<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:.5rem 0 .2rem;">${l}</div>`;
+        items.forEach((c,i)=>{
+          const sel=s.selC[k]&&s.selC[k].includes(c);
+          html+=`<div class="step-option ${sel?'sel':''}" onclick="stepTogComp('${k}',${i},this)" style="padding:.5rem .75rem;gap:.55rem;">
+            <span style="flex-shrink:0;font-size:.85rem;width:1.1rem;">${sel?'✓':'○'}</span>
+            <span style="font-size:.8rem;line-height:1.45;">${esc(c)}</span>
+          </div>`;
+        });
+      });
+      html+=`<div style="margin-top:.7rem;"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.3rem;">Eigene Ergänzung</div>
+        <textarea class="step-textarea" id="comp-custom-ta" rows="2" placeholder="Abweichende oder eigene Kompetenz…" style="margin-bottom:0;">${esc(s.compCustom||"")}</textarea></div>`;
+      return html;
+    },
+    canNext(s){return true;},
+    onNext(s){s.compCustom=document.getElementById("comp-custom-ta")?.value.trim()||s.compCustom||"";}
+  },
+  // 7: Lerngruppe
+  {
+    id:"lg", eyebrow:"Schritt 8", question:"Wer sitzt vor dir?",
+    sub:"Wähle die zutreffenden Merkmale.",
+    render(s){
+      const selCh=s.lgCh||{};
+      let html="";
+      [["Klassengröße","size"],["Leistungsstand","leistung"],["Besonderheiten","beson"]].forEach(([label,cat])=>{
+        html+=`<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:.5rem 0 .28rem;">${label}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.1rem;">
+          ${LG_CHIPS[cat].map(o=>`<div class="chip ${(selCh[cat]||[]).includes(o)?'sel':''}" onclick="stepTogLG('${cat}','${o.replace(/'/g,"\\'")}',this,'${cat!=="beson"?'single':'multi'}')">${esc(o)}</div>`).join("")}</div>`;
+      });
+      html+=`<div style="margin-top:.7rem;"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.28rem;">Freie Ergänzung</div>
+        <textarea class="step-textarea" id="lg-frei-ta" rows="2" placeholder="z.B. 2 SuS mit Förderbedarf, gutes Sozialklima…" style="margin-bottom:0;">${esc(s.lgFr||"")}</textarea></div>`;
+      return html;
+    },
+    canNext(s){return true;},
+    onNext(s){s.lgFr=document.getElementById("lg-frei-ta")?.value.trim()||s.lgFr||"";}
+  }
+];
+
+// ═══════════════════════════════════════════════════
+// SESSIONS
+// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// PERSISTENCE (Pause & Fortsetzen)
+// ═══════════════════════════════════════════════════
+function saveSessions(){
+  try{localStorage.setItem("ub_sessions",JSON.stringify({sessions,activeId}));}catch(e){}
+}
+function loadSessions(){
+  try{
+    const raw=localStorage.getItem("ub_sessions");
+    if(!raw)return false;
+    const d=JSON.parse(raw);
+    if(!d.sessions||!d.sessions.length)return false;
+    sessions=d.sessions;
+    activeId=sessions.find(s=>s.id===d.activeId)?d.activeId:sessions[0].id;
+    return true;
+  }catch(e){return false;}
+}
+
+function newSession(){
+  const id="s"+Date.now();
+  sessions.push({id,name:"Neue Planung",typ:null,ubNr:1,dg:"",fach:null,jgst:null,klp:"",uvs:[],selUV:null,selC:{bwk:[],mk:[],uk:[]},compCustom:"",lgCh:{size:[],leistung:[],beson:[]},lgFr:"",exchanges:[],apiH:[],curQ:null,phase:0,done:false,psum:[],devR:0,devN:"",result:null,vp:mkVP()});
+  switchSession(id);
+}
+
+function switchSession(id){
+  activeId=id; saveSessions(); renderSB();
+  const s=S();
+  if(s.done){showRes();}
+  else if(s.phase>0||s.curQ){showQA();}
+  else{curStep=firstStep(s);showStepScreen();}
+  upHdr();
+}
+
+function firstStep(s){
+  // Find first step that isn't done yet
+  for(let i=0;i<STEPS.length;i++){
+    if(STEPS[i].skip&&STEPS[i].skip(s))continue;
+    if(!stepDone(s,i))return i;
+  }
+  return 0;
+}
+
+function stepDone(s,i){
+  const step=STEPS[i];
+  switch(step.id){
+    case"typ":return!!s.typ;
+    case"ubnr":return true;
+    case"dg":return true;
+    case"fach":return!!s.fach;
+    case"jgst":return!!s.jgst;
+    case"silp":return true;
+    case"comps":return true;
+    case"lg":return false; // always re-ask
+    default:return false;
+  }
+}
+
+function delSess(id,e){
+  e.stopPropagation();
+  if(sessions.length===1){alert("Mindestens eine Planung.");return;}
+  sessions=sessions.filter(x=>x.id!==id);
+  if(activeId===id){activeId=sessions[0].id;switchSession(activeId);}
+  saveSessions();
+  renderSB();
+}
+
+function renderSB(){
+  document.getElementById("sb-list").innerHTML=sessions.map(s=>`
+    <div class="sess ${s.id===activeId?"active":""} ${s.done?"done":""}" onclick="switchSession('${s.id}')">
+      <div class="sess-dot"></div>
+      <div class="sess-info">
+        <span class="sess-name" id="sn-${s.id}" onclick="renSess('${s.id}',event)">${esc(s.name)}</span>
+        ${s.fach?`<div class="sess-sub">${esc(s.fach)}${s.jgst?" · Jg."+s.jgst:""}</div>`:""}
+      </div>
+      <button class="sess-del" onclick="delSess('${s.id}',event)">✕</button>
+    </div>`).join("");
+}
+
+function renSess(id,e){
+  e.stopPropagation();
+  const el=document.getElementById("sn-"+id);if(!el)return;
+  const old=el.textContent;
+  const inp=document.createElement("input");
+  inp.className="sess-name-input";inp.value=old;
+  el.replaceWith(inp);inp.focus();inp.select();
+  const done=()=>{const s=sessions.find(x=>x.id===id);if(s)s.name=inp.value.trim()||old;saveSessions();renderSB();upHdr();};
+  inp.addEventListener("blur",done);
+  inp.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();inp.blur();}if(ev.key==="Escape"){inp.value=old;inp.blur();}});
+}
+
+// ═══════════════════════════════════════════════════
+// HEADER
+// ═══════════════════════════════════════════════════
+function upHdr(){
+  const s=S();if(!s)return;
+  const ph=s.typ==="ub"?PH_UB:PH_NORM;
+  const inSetup=!s.done&&s.phase===0&&!s.curQ;
+  if(inSetup){
+    const visSteps=STEPS.filter(st=>!(st.skip&&st.skip(s)));
+    const stepNum=visSteps.findIndex(st=>st===STEPS[curStep])+1;
+    document.getElementById("tb-meta").textContent=s.fach?s.fach+(s.jgst?" · Jg."+s.jgst:""):"Einrichtung";
+    document.getElementById("tb-title").textContent=STEPS[curStep]?.question||"Neue Planung";
+    // Progress dots = visible steps
+    document.getElementById("phase-dots").innerHTML=visSteps.map((st,i)=>
+      `<div class="pdot ${i<stepNum-1?"done":i===stepNum-1?"active":""}" onclick="jumpStep(${STEPS.indexOf(st)})" title="${st.eyebrow}"><span class="pdot-label">${st.eyebrow}</span></div>`).join("");
+    const pct=Math.round(((stepNum-1)/visSteps.length)*100);
+    document.getElementById("prog-fill").style.width=pct+"%";
+  } else {
+    const i=Math.min(s.phase,ph.length-1);
+    document.getElementById("tb-meta").textContent=`${s.fach||""} · ${s.typ==="ub"?s.ubNr+". UB":"Stunde"}${s.jgst?" · Jg."+s.jgst:""}`;
+    document.getElementById("tb-title").textContent=s.done?"Planung abgeschlossen ✓":ph[i];
+    document.getElementById("phase-dots").innerHTML=ph.map((_,j)=>
+      `<div class="pdot ${j<s.phase?"done":j===s.phase&&!s.done?"active":""}" onclick="jumpToPhase(${j})" title="${ph[j]}"><span class="pdot-label">${ph[j]}</span></div>`).join("");
+    const pct=s.done?100:Math.round((s.phase/ph.length)*100);
+    document.getElementById("prog-fill").style.width=pct+"%";
+  }
+}
+
+function jumpStep(i){
+  if(i<curStep){curStep=i;renderStep();}
+}
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+function switchTab(n){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===n));
+  document.querySelectorAll(".pane").forEach(p=>p.classList.remove("active"));
+  document.getElementById("pane-"+n).classList.add("active");
+  if(n==="vp")renderVP();
+}
+
+// ═══════════════════════════════════════════════════
+// SCREEN MANAGEMENT
+// ═══════════════════════════════════════════════════
+function hideAll(){
+  ["step-screen","screen-qa","screen-results"].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add("hidden");});
+  document.getElementById("ibar").classList.add("hidden");
+  document.getElementById("tabs").classList.add("hidden");
+}
+function showStepScreen(){hideAll();document.getElementById("step-screen").classList.remove("hidden");renderStep();}
+function showQA(){
+  hideAll();
+  document.getElementById("screen-qa").classList.remove("hidden");
+  document.getElementById("ibar").classList.remove("hidden");
+  document.getElementById("tabs").classList.remove("hidden");
+  // Reset history open state
+  const hist=document.getElementById("qa-history");
+  if(hist) hist.dataset.open="true";
+  renderThread();
+}
+function showRes(){hideAll();document.getElementById("screen-results").classList.remove("hidden");document.getElementById("tabs").classList.remove("hidden");renderResults();renderSB();}
+
+// ═══════════════════════════════════════════════════
+// STEP ENGINE
+// ═══════════════════════════════════════════════════
+function renderStep(){
+  const s=S();
+  const step=STEPS[curStep];
+  if(!step)return;
+  const visSteps=STEPS.filter(st=>!(st.skip&&st.skip(s)));
+  const stepNum=visSteps.indexOf(step)+1;
+  const total=visSteps.length;
+  const wrap=document.getElementById("step-wrap");
+  wrap.innerHTML=`
+    <div class="step-card">
+      <div class="step-eyebrow">${step.eyebrow} von ${total}</div>
+      <div class="step-question">${step.question}</div>
+      ${step.sub?`<div class="step-sub">${step.sub}</div>`:""}
+      <div id="step-body">${step.render(s)}</div>
+      <div class="step-footer">
+        <div class="step-counter">${stepNum} / ${total}</div>
+        <div class="step-nav">
+          ${curStep>0?`<button class="step-back" onclick="stepBack()">← Zurück</button>`:""}
+          <button class="step-next" id="step-next-btn" onclick="stepNext()" ${step.canNext(s)?"":" disabled"}>
+            ${curStep===STEPS.length-1?"Planung starten →":"Weiter →"}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  upHdr();
+  // Auto-extract from embedded SILP data
+  if(step.id==="silp"){
+    const s=S();
+    if(!s.uvs||!s.uvs.length){
+      const hasEmbedded=UV_DATA[s.fach]&&UV_DATA[s.fach][s.jgst];
+      if(hasEmbedded) setTimeout(()=>extractEmbeddedSILP(),150);
+    }
+  }
+  // Re-attach drag&drop for SILP step
+  if(step.id==="silp"){
+    const uz=document.getElementById("upload-zone");
+    if(uz){
+      uz.addEventListener("dragover",e=>{e.preventDefault();uz.classList.add("drag");});
+      uz.addEventListener("dragleave",()=>uz.classList.remove("drag"));
+      uz.addEventListener("drop",e=>{e.preventDefault();uz.classList.remove("drag");const f=e.dataTransfer.files[0];if(f){const inp=document.getElementById("silp-file");const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;handleSILP(inp);}});
+    }
+  }
+}
+
+function refreshNextBtn(){
+  const s=S(); const step=STEPS[curStep];
+  const btn=document.getElementById("step-next-btn");
+  if(btn)btn.disabled=!step.canNext(s);
+}
+
+function stepNext(){
+  const s=S(); const step=STEPS[curStep];
+  if(!step.canNext(s))return;
+  if(step.onNext)step.onNext(s);
+  saveSessions();
+  // Find next non-skipped step
+  let next=curStep+1;
+  while(next<STEPS.length&&STEPS[next].skip&&STEPS[next].skip(s))next++;
+  if(next>=STEPS.length){
+    // All steps done — start planning
+    if(!s.name||s.name==="Neue Planung")s.name=(s.selUV?s.selUV.titel.slice(0,38)+"…":s.fach+" · Jg."+s.jgst);
+    renderSB();showQA();upHdr();startAgent();
+  } else {
+    curStep=next;renderStep();
+  }
+}
+
+function stepBack(){
+  const s=S();
+  let prev=curStep-1;
+  while(prev>=0&&STEPS[prev].skip&&STEPS[prev].skip(s))prev--;
+  if(prev>=0){curStep=prev;renderStep();}
+}
+
+// ── Step pickers ──────────────────────────────────
+function pick(field,val,el){
+  const s=S(); s[field]=val;
+  el.closest("#step-body").querySelectorAll(".step-option").forEach(o=>o.classList.remove("sel"));
+  el.classList.add("sel");
+  refreshNextBtn();
+  saveSessions();
+}
+
+function pickN(field,val,el){
+  const s=S(); s[field]=val;
+  el.closest("#step-body").querySelectorAll(".step-option").forEach(o=>o.classList.remove("sel"));
+  el.classList.add("sel");
+  saveSessions();
+}
+
+function pickFach(f,el){
+  const s=S(); s.fach=f; s.klp=KLP[f]||"KLP "+f+" Gymnasium NRW";
+  el.closest("#step-body").querySelectorAll(".step-option").forEach(o=>{
+    o.classList.remove("sel"); o.style.background="";
+  });
+  el.classList.add("sel");
+  const fd=FACH_DATA[f]; if(fd)el.style.background=fd.bg;
+  refreshNextBtn();
+  saveSessions();
+}
+
+function pickJg(j,el){
+  const s=S(); s.jgst=j;
+  el.closest("#step-body").querySelectorAll(".step-option").forEach(o=>o.classList.remove("sel"));
+  el.classList.add("sel");
+  refreshNextBtn();
+  saveSessions();
+}
+
+function stepSelUV(uid){
+  const s=S(); const uv=s._uvMap&&s._uvMap[uid]; if(!uv)return;
+  s.selUV=uv; s.selC={bwk:[],mk:[],uk:[]};
+  document.querySelectorAll(".step-option[onclick*='stepSelUV']").forEach(el=>{
+    el.classList.toggle("sel",el.getAttribute("onclick").includes(uid));
+  });
+  saveSessions();
+  // Auto-advance to next step
+  setTimeout(()=>stepNext(),200);
+}
+
+function stepTogComp(key,idx,el){
+  const s=S(); if(!s.selUV||!s.selC)return;
+  const comp=(s.selUV[key]||[])[idx]; if(comp===undefined)return;
+  if(!s.selC[key])s.selC[key]=[];
+  const i=s.selC[key].indexOf(comp);
+  if(i>=0){s.selC[key].splice(i,1);el.classList.remove("sel");el.querySelector("span").textContent="○";}
+  else{s.selC[key].push(comp);el.classList.add("sel");el.querySelector("span").textContent="✓";}
+  saveSessions();
+}
+
+function stepTogLG(cat,val,el,mode){
+  const s=S(); if(!s.lgCh[cat])s.lgCh[cat]=[];
+  if(mode==="single"){
+    s.lgCh[cat]=[val];
+    el.closest("div").querySelectorAll(".chip").forEach(c=>c.classList.remove("sel"));
+    el.classList.add("sel");
+  } else {
+    const i=s.lgCh[cat].indexOf(val);
+    if(i>=0){s.lgCh[cat].splice(i,1);el.classList.remove("sel");}
+    else{s.lgCh[cat].push(val);el.classList.add("sel");}
+  }
+  saveSessions();
+}
+
+// ═══════════════════════════════════════════════════
+// SILP UPLOAD
+// ═══════════════════════════════════════════════════
+function setSilpStatus(type,text){
+  const el=document.getElementById("silp-status");
+  if(el)el.innerHTML=`<div class="status-pill ${type}"><div class="s-dot${type==="loading"?" pulse":""}"></div>${esc(text)}</div>`;
+}
+function showSilpLoad(step,sub){
+  const el=document.getElementById("silp-load"); if(el)el.classList.remove("hidden");
+  const t=document.getElementById("silp-load-text"); if(t)t.textContent=step;
+  const sb=document.getElementById("silp-load-sub"); if(sb)sb.textContent=sub||"";
+  const st=document.getElementById("silp-status"); if(st)st.innerHTML="";
+}
+function hideSilpLoad(){const el=document.getElementById("silp-load");if(el)el.classList.add("hidden");}
+
+
+function extractEmbeddedSILP(){
+  const s=S();
+  const rawUVs=UV_DATA[s.fach]&&UV_DATA[s.fach][s.jgst];
+  if(!rawUVs||!rawUVs.length){
+    const st=document.getElementById("silp-status");
+    if(st)st.innerHTML=`<div class="status-pill loading"><div class="s-dot pulse"></div>Kein eingebetteter SILP für ${s.fach} Jg.${s.jgst} — bitte hochladen</div>`;
+    return;
+  }
+  s.uvs=rawUVs.map((uv,i)=>({...uv,_uid:"uv"+i}));
+  s._uvMap={};
+  s.uvs.forEach(uv=>s._uvMap[uv._uid]=uv);
+  saveSessions();
+  renderStep();
+}
+
+async function handleSILP(inp){
+  const file=inp.files[0];if(!file)return;
+  const s=S();
+  const uz=document.getElementById("upload-zone");
+  if(uz)uz.classList.add("has-file");
+  showSilpLoad("Schritt 1/3: Lese PDF…","");
+
+  try{
+    const raw=await new Promise((res,rej)=>{
+      const rd=new FileReader();
+      rd.onload=e=>res(e.target.result); rd.onerror=rej;
+      if(file.name.toLowerCase().endsWith(".pdf"))rd.readAsArrayBuffer(file);
+      else rd.readAsText(file);
+    });
+
+    let reply="";
+    if(file.name.toLowerCase().endsWith(".pdf")){
+      const bytes=new Uint8Array(raw); let bin="";
+      for(let i=0;i<bytes.length;i+=1024)bin+=String.fromCharCode.apply(null,bytes.subarray(i,Math.min(i+1024,bytes.length)));
+      const b64=btoa(bin);
+      showSilpLoad("Schritt 2/3: Analysiere mit KI…",(b64.length/1024/1024).toFixed(1)+" MB · Klasse "+s.jgst);
+      showSilpLoad("Schritt 2/3: Analysiere mit KI…",(b64.length/1024/1024).toFixed(1)+" MB · Klasse "+s.jgst);
+      const data=await callProxy({max_tokens:4096,beta:"pdfs-2024-09-25",messages:[{role:"user",content:[
+        {type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}},
+        {type:"text",text:`Analysiere diesen SILP und extrahiere NUR die UVs der Jahrgangsstufe ${s.jgst}.
+
+Antworte AUSSCHLIESSLICH mit einem JSON-Array. Beginne mit [ und ende mit ].
+
+Format:
+[{"jg":${s.jgst},"nr":"2.1","bf":"BF2 Das Spielen entdecken","bf_short":"BF2","std":20,"titel":"Vollständiger UV-Titel","if_":["e"],"bwk":["BWK-Kompetenz 1","BWK-Kompetenz 2"],"mk":["MK 1"],"uk":["UK 1"]}]
+
+Fehlende Felder als leere Arrays [].`}
+      ]}]});
+      reply=data.content.filter(b=>b.type==="text").map(b=>b.text).join("");
+    } else {
+      const txt=raw;
+      showSilpLoad("Schritt 2/3: Extrahiere UVs…","");
+      const data=await callProxy({max_tokens:4096,messages:[{role:"user",content:`JSON-Array aller UVs der Klasse ${s.jgst} (nur JSON, beginne mit [):\n${txt.slice(0,9000)}`}]});
+      reply=data.content.filter(b=>b.type==="text").map(b=>b.text).join("");
+    }
+
+    showSilpLoad("Schritt 3/3: Verarbeite…","");
+    let uvs=extractJSON(reply);
+
+    if(!uvs){
+      const rd=await callProxy({max_tokens:4096,messages:[{role:"user",content:`Konvertiere in valides JSON-Array (nur JSON, beginne mit [):\n${reply.slice(0,3000)}`}]});
+      uvs=extractJSON(rd.content.filter(b=>b.type==="text").map(b=>b.text).join(""));
+    }
+
+    hideSilpLoad();
+    if(uvs&&uvs.length>0){
+      s._uvMap={};
+      uvs.forEach((uv,i)=>{uv._uid="uv"+i;s._uvMap["uv"+i]=uv;});
+      s.uvs=uvs;
+      saveSessions();
+      setSilpStatus("ok","✓ "+uvs.length+" UVs für Klasse "+s.jgst+" extrahiert — bitte UV auswählen:");
+      // Re-render step to show UV list
+      renderStep();
+    } else {
+      throw new Error("Keine UVs gefunden.");
+    }
+  }catch(err){
+    hideSilpLoad();
+    console.error("SILP:",err);
+    setSilpStatus("err","⚠️ "+err.message);
+  }
+}
+
+function extractJSON(text){
+  if(!text)return null;
+  let t=text.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+  try{const a=JSON.parse(t);if(Array.isArray(a)&&a.length)return a;}catch(e){}
+  const s=t.indexOf("["),e=t.lastIndexOf("]");
+  if(s>=0&&e>s){try{const a=JSON.parse(t.slice(s,e+1));if(Array.isArray(a)&&a.length)return a;}catch(e){}}
+  try{
+    const objs=[]; let depth=0,inStr=false,esc_=false,start=-1;
+    for(let i=0;i<t.length;i++){
+      const c=t[i];
+      if(esc_){esc_=false;continue;}if(c==="\\"&&inStr){esc_=true;continue;}
+      if(c==='"'){inStr=!inStr;continue;}if(inStr)continue;
+      if(c==="{"){if(!depth)start=i;depth++;}
+      if(c==="}"){depth--;if(!depth&&start>=0){try{objs.push(JSON.parse(t.slice(start,i+1)));}catch(e){}start=-1;}}
+    }
+    if(objs.length)return objs;
+  }catch(e){}
+  return null;
+}
+
+// ═══════════════════════════════════════════════════
+// SYSTEM PROMPT
+// ═══════════════════════════════════════════════════
+function bldSys(){
+  const s=S(); const isUB=s.typ==="ub";
+  const lg=[s.jgst?"Klasse "+s.jgst:"",...(s.lgCh.size||[]),...(s.lgCh.leistung||[]),...(s.lgCh.beson||[])?["Besonderheiten: "+(s.lgCh.beson||[]).join(", ")]:[],s.lgFr||""].filter(Boolean).join(" · ")||"nicht angegeben";
+  const comp=s.selUV?`\nGewählte Kompetenzen:\nBWK: ${(s.selC.bwk||[]).join(" | ")||"alle"}\nMK: ${(s.selC.mk||[]).join(" | ")||"alle"}\nUK: ${(s.selC.uk||[]).join(" | ")||"alle"}${s.compCustom?"\nEig.: "+s.compCustom:""}`:""
+  const uvCtx=s.selUV?`\nUV: ${s.selUV.titel} · ${s.selUV.bf||""} · IF: ${(s.selUV.if_||[]).join(",")} · ${s.selUV.std||"?"} Std.${comp}`:"Freie Planung.";
+  const dep=isUB?(s.ubNr<=1?"Frage einfach und direkt.":s.ubNr<=3?"Hake bei unscharfen Antworten nach.":"Fordere Präzision, prüfe Kohärenz kritisch."):"";
+  const pUB=`PHASEN (7, UB):\n1.VORHABEN: Kompetenzziel Reihe (aktives Verb+Inhalt) · Stundenanzahl · Erkennbarkeit. Lerngruppe/UV bekannt — nicht nochmal fragen.\n2.VERORTUNG: Stunde Nr./von · davor · danach · Funktion · warum jetzt zwingend\n3.GEGENSTAND→THEMA: Gegenstand (nicht didaktisch reduziert) · Intention · Thema=Gegenstand+Intention\n4.KERNANLIEGEN: Dreiteilig: Unterrichtsaktivität + konkrete Fähigkeit + Kompetenzaufbau. Harter Operator (benennen/beschreiben/erläutern/beurteilen/demonstrieren — NICHT kennen/wissen).\n5.TEILLERNZIELE: Wissen · Können · Erleben · zentrales TLZ?\n6.KOHÄRENZ: Kernanliegen→Reihenziel · Verortung zwingend? · TLZ stimmig? · Reflexionsfragen (offen, SuS-aktivierend)\n7.MITTAGESSEN-TEST: Kind-Satz in Jugendsprache · deckt zentrales TLZ ab?`;
+  const pNorm=`PHASEN (3, Normale Stunde):\n1.LERNGRUPPE & ZIEL: Stundenziel (konkret, beobachtbar) · Einbettung in Reihe\n2.STUNDENSTRUKTUR: Einstieg · Erarbeitung · Reflexion\n3.REFLEXIONSFRAGEN: 2–3 offene Fragen für die Reflexionsphase`;
+  return `Du bist Ausbildungslehrer ${s.fach} Gymnasium NRW.\n\nKLP ${s.fach}:\n${s.klp||KLP[s.fach]||""}\n\nJahrgangsstufe: ${s.jgst||"?"}\n${uvCtx}\nLERNGRUPPE: ${lg}\nENTWICKLUNGSZIEL: ${s.dg||"Gesprächs- und Reflexionsphasen verbessern"}\nART: ${isUB?s.ubNr+". Unterrichtsbesuch":"Normale Stunde"}\n${dep}\n\nAUFGABE: Strukturiertes Planungsgespräch. Pro Nachricht NUR EINE Frage.\n\n${isUB?pUB:pNorm}\n\nPHASENABSCHLUSS: [PE:N] und [SUM:Punkt1|Punkt2|Punkt3] am Anfang.\n\nTIPP: Bei Tipp-Anfragen: 2–3 Sätze Praxistipp für ${s.fach}, dann Frage erneut.\n\nABSCHLUSS — nur JSON:\n{"type":"result","kind":"...","eroeffnung":"...","reflexion":"...","hinweise":"...","vp":[{"phase":"Einstieg","g":"...","o":"...","k":"..."},{"phase":"Aufwärmen","g":"...","o":"...","k":"..."},{"phase":"Gelenkstelle","g":"...","o":"...","k":"..."},{"phase":"Erarbeitung","g":"...","o":"...","k":"..."},{"phase":"Reflexion I","g":"...","o":"...","k":"..."},{"phase":"Reflexion II","g":"...","o":"...","k":"..."},{"phase":"Ausklang","g":"...","o":"...","k":"..."}]}\nVerlaufsplan: kompakt · Stichwörter · Semikolons · *kursiv für Impulsfragen*\n\nSonst JSON: {"type":"question","phase":N,"question":"...","hint":"...","feedback":"..."}\n\nNur gültiges JSON (außer bei PE/SUM). Per Du.`;
+}
+
+// ═══════════════════════════════════════════════════
+// AGENT
+// ═══════════════════════════════════════════════════
+async function startAgent(){
+  const s=S(); s.exchanges=[];s.apiH=[];s.phase=0;s.curQ=null;s.psum=[];
+  setInp(false); renderThread();
+  try{
+    const r=await callAPI([{role:"user",content:"Starte. Lerngruppe und UV bekannt. Direkt mit Phase 1."}],700);
+    s.apiH=[{role:"user",content:"Starte. Lerngruppe und UV bekannt. Direkt mit Phase 1."},{role:"assistant",content:r}];
+    procReply(r);
+  }catch(e){s.curQ={type:"question",phase:0,question:"Fehler: "+e.message,hint:"",feedback:""};saveSessions();}
+  renderThread(); setInp(true);
+}
+
+async function sendAnswer(){
+  const ta=document.getElementById("ci"); const ans=ta.value.trim(); if(!ans)return;
+  const s=S(); if(!s||!s.curQ)return;
+  ta.value=""; ar(ta);
+  s.exchanges.push({q:s.curQ.question,a:ans,fb:"",tip:null});
+  s.curQ=null; s.apiH.push({role:"user",content:ans});
+  setInp(false); renderThread();
+  try{
+    const r=await callAPI(s.apiH,900);
+    s.apiH.push({role:"assistant",content:r}); procReply(r);
+  }catch(e){s.curQ={type:"question",phase:s.phase,question:"Fehler: "+e.message,hint:"",feedback:""};saveSessions();}
+  renderThread(); setInp(true);
+}
+
+function procReply(raw){
+  const s=S();
+  const pe=raw.match(/\[PE:(\d+)\]/); const sm=raw.match(/\[SUM:([^\]]+)\]/);
+  let cr=raw.replace(/\[PE:\d+\]/g,"").replace(/\[SUM:[^\]]+\]/g,"").trim();
+  if(pe){const n=parseInt(pe[1]);const items=sm?sm[1].split("|").map(x=>x.trim()):[];s.psum.push({phase:n,items});if(n>s.phase)s.phase=n;upHdr();}
+  try{
+    const d=JSON.parse(cr.replace(/```json|```/g,"").trim());
+    if(d.type==="result"){
+      s.result=d;s.done=true;const ph=s.typ==="ub"?PH_UB:PH_NORM;s.phase=ph.length;
+      if(d.vp&&Array.isArray(d.vp))s.vp=d.vp.map(r=>({phase:r.phase,g:r.g||r.geschehen||"",o:r.o||r.organisation||"",k:r.k||r.kommentar||""}));
+      saveSessions();
+      renderSB();showRes();return;
+    }
+    if(d.feedback&&s.exchanges.length>0)s.exchanges[s.exchanges.length-1].fb=d.feedback;
+    s.curQ=d;
+    if(typeof d.phase==="number"&&d.phase>s.phase)s.phase=d.phase;
+    upHdr();
+  }catch(e){s.curQ={type:"question",phase:s.phase,question:cr.slice(0,500),hint:"",feedback:""};}
+  saveSessions();
+}
+
+function renderThread(){
+  const s=S();
+  const ph=s.typ==="ub"?PH_UB:PH_NORM;
+  const phIdx=Math.min(s.phase,ph.length-1);
+
+  // ── NAV BAR ──────────────────────────────────────────────────────
+  const nav=document.getElementById("qa-nav");
+  if(nav) nav.innerHTML=`
+    <button class="qa-nav-btn" onclick="navPhase(-1)" ${s.phase===0?"disabled":""}>←</button>
+    <div class="qa-phase-label">${esc(ph[phIdx]||"")}</div>
+    <button class="qa-nav-btn" onclick="navPhase(1)" ${s.phase>=s.psum.length?"disabled":""}>→</button>
+    <button class="btn-ghost" style="font-size:.71rem;padding:.24rem .62rem;margin-left:.5rem;" onclick="backToSetup()">⚙ Setup</button>`;
+
+  // ── HERO: current question ────────────────────────────────────────
+  const hero=document.getElementById("qa-hero");
+  if(hero){
+    if(s.curQ){
+      hero.innerHTML=`<div class="q-card">
+        <div class="q-label">Phase ${s.phase+1} · ${esc(ph[phIdx]||"")}</div>
+        <div class="q-text">${esc(s.curQ.question)}</div>
+        ${s.curQ.hint?`<div class="q-hint">${esc(s.curQ.hint)}</div>`:""}
+        <button class="q-tip-btn" onclick="askTip()">💡 Tipp zur Umsetzung</button>
+      </div>`;
+    } else {
+      hero.innerHTML=`<div class="q-card" style="display:flex;align-items:center;gap:.7rem;padding:1.1rem 1.4rem;">
+        <div class="t-bubble"><span class="td"></span><span class="td"></span><span class="td"></span></div>
+        <span style="font-size:.82rem;color:var(--text2);">Agent denkt nach…</span>
+      </div>`;
+    }
+  }
+
+  // ── HISTORY ACCORDION ─────────────────────────────────────────────
+  const hist=document.getElementById("qa-history");
+  if(!hist) return;
+
+  const totalItems=s.exchanges.length+s.psum.length;
+  if(totalItems===0){hist.innerHTML="";return;}
+
+  const isOpen=hist.dataset.open!=="false"; // default open
+  hist.innerHTML=`
+    <div class="history-toggle" onclick="toggleHistory()">
+      <span class="history-toggle-icon ${isOpen?"open":""}">▶</span>
+      <span>Gesprächsverlauf (${totalItems} ${totalItems===1?"Eintrag":"Einträge"})</span>
+      <span class="history-toggle-line"></span>
+    </div>
+    <div class="history-items ${isOpen?"open":""}">
+      ${buildHistoryHTML(s,ph)}
+    </div>`;
+
+  // scroll to bottom
+  const c=document.getElementById("content");
+  if(c) c.scrollTop=c.scrollHeight;
+  if(s.curQ) setTimeout(()=>{const ci=document.getElementById("ci");if(ci)ci.focus();},80);
+}
+
+function buildHistoryHTML(s,ph){
+  let html="";
+  // Merge exchanges and phase summaries in order
+  let exIdx=0;
+  for(const ps of s.psum){
+    // Show exchanges that belong to this phase first
+    while(exIdx<s.exchanges.length){
+      const ex=s.exchanges[exIdx];
+      html+=`<div class="exchange fu">
+        <div class="ex-q">${esc(ex.q)}</div>
+        <div class="ex-a">${esc(ex.a)}</div>
+        ${ex.fb?`<div class="ex-fb">✓ ${esc(ex.fb)}</div>`:""}
+      </div>`;
+      exIdx++;
+      if(exIdx>=s.exchanges.length) break;
+    }
+    // Phase summary card
+    const phName=ph[ps.phase-1]||"Phase "+ps.phase;
+    html+=`<div class="phase-sum">
+      <div class="ps-head">
+        <span class="ps-badge">Phase ${ps.phase} ✓</span>
+        <span class="ps-title">${esc(phName)}</span>
+      </div>
+      ${ps.items.length?`<div class="ps-items">${ps.items.map(x=>`<div class="ps-item">${esc(x)}</div>`).join("")}</div>`:""}
+    </div>`;
+  }
+  // Remaining exchanges
+  while(exIdx<s.exchanges.length){
+    const ex=s.exchanges[exIdx];
+    html+=`<div class="exchange fu">
+      <div class="ex-q">${esc(ex.q)}</div>
+      <div class="ex-a">${esc(ex.a)}</div>
+      ${ex.fb?`<div class="ex-fb">✓ ${esc(ex.fb)}</div>`:""}
+    </div>`;
+    exIdx++;
+  }
+  // Tip outputs
+  s.exchanges.filter(e=>e.tip).forEach(e=>{
+    html+=`<div class="tip-out">💡 ${esc(e.tip)}</div>`;
+  });
+  return html;
+}
+
+function toggleHistory(){
+  const hist=document.getElementById("qa-history");
+  if(!hist)return;
+  const items=hist.querySelector(".history-items");
+  const icon=hist.querySelector(".history-toggle-icon");
+  const isOpen=items.classList.contains("open");
+  items.classList.toggle("open",!isOpen);
+  if(icon)icon.classList.toggle("open",!isOpen);
+  hist.dataset.open=String(!isOpen);
+}
+
+
+function navPhase(dir){
+  const s=S(); if(!s)return;
+  const ph=s.typ==="ub"?PH_UB:PH_NORM;
+  const np=Math.max(0,Math.min(s.psum.length,s.phase+dir));
+  if(np!==s.phase){s.phase=np;upHdr();renderThread();saveSessions();}
+}
+
+function jumpToPhase(j){const s=S();if(!s||j>s.psum.length)return;s.phase=j;upHdr();renderThread();saveSessions();}
+
+function backToSetup(){
+  const s=S(); if(!s)return;
+  curStep=0; showStepScreen();
+}
+
+async function askTip(){
+  const s=S(); if(!s||!s.curQ)return;
+  const tb=document.querySelector(".q-tip-btn"); if(!tb)return;
+  tb.disabled=true; tb.textContent="💡 Lade Tipp…";
+  try{
+    const tip=await callAPI([...s.apiH,{role:"user",content:`Konkreter Praxistipp für ${s.fach}: "${s.curQ.question}" — max. 3 Sätze. Dann Frage erneut.`}],400);
+    const tc=document.createElement("div"); tc.className="tip-out fu";
+    tc.innerHTML="💡 "+esc(tip.replace(/{"type"[^}]+}/s,"").trim().slice(0,350));
+    const qc=document.querySelector(".q-card"); if(qc)qc.after(tc);
+  }catch(e){}
+  tb.disabled=false; tb.textContent="💡 Tipp zur Umsetzung";
+}
+
+// ═══════════════════════════════════════════════════
+// RESULTS
+// ═══════════════════════════════════════════════════
+let dRC=0;
+function renderResults(){
+  const s=S(); const d=s.result||{};
+  document.getElementById("res-area").innerHTML=`
+    <div class="res-hero fu">
+      <div class="res-hero-label">🥗 Mittagessen-Test</div>
+      <div class="res-hero-text" id="rk">${esc(d.kind||"")}</div>
+      <button onclick="cp('rk')" style="margin-top:.45rem;font-size:.7rem;color:rgba(255,255,255,.7);border:none;background:none;cursor:pointer;font-family:var(--font);">Kopieren</button>
+    </div>
+    <div class="res-card fu"><div class="res-card-head">🎤 Eröffnungssatz <button class="copy-btn" onclick="cp('re')">Kopieren</button></div><div class="res-card-body" id="re">${esc(d.eroeffnung||"").replace(/\n/g,"<br>")}</div></div>
+    <div class="res-card fu"><div class="res-card-head">💬 Reflexionsfragen <button class="copy-btn" onclick="cp('rr')">Kopieren</button></div><div class="res-card-body" id="rr">${esc(d.reflexion||"").replace(/\n/g,"<br>")}</div></div>
+    <div class="res-card fu"><div class="res-card-head">⚠️ Kohärenz-Hinweise</div><div class="res-card-body">${esc(d.hinweise||"").replace(/\n/g,"<br>")}</div></div>
+    <div class="dev-card fu">
+      <h4>🎯 Nach der Stunde: Entwicklungsziel-Reflexion</h4>
+      <p style="font-size:.8rem;color:var(--purple);margin-bottom:.3rem;">Entwicklungsziel: ${esc(s.dg||"Reflexionsphasen verbessern")}</p>
+      <div class="dev-rating">${[1,2,3,4,5].map(n=>`<button onclick="setDR(${n})" id="dr${n}" class="${(s.devR||0)===n?"sel":""}">${n}</button>`).join("")}</div>
+      <textarea class="dev-note" rows="2" id="drn" placeholder="Was hat geklappt? Was nicht?">${esc(s.devN||"")}</textarea>
+      <div style="display:flex;gap:.5rem;margin-top:.55rem;flex-wrap:wrap;">
+        <button class="btn-primary" style="font-size:.8rem;padding:.42rem 1rem;" onclick="saveDR()">Speichern</button>
+        <button class="btn-ghost" style="font-size:.8rem;padding:.4rem .95rem;" onclick="getDRF()">KI-Feedback ✦</button>
+        <button class="btn-ghost" style="font-size:.8rem;padding:.4rem .95rem;margin-left:auto;" onclick="newSession()">＋ Neue Planung</button>
+      </div>
+      <div id="dki" class="dev-ki-out hidden"></div>
+    </div>`;
+}
+function setDR(n){dRC=n;const s=S();if(s)s.devR=n;[1,2,3,4,5].forEach(i=>{const b=document.getElementById("dr"+i);if(b)b.classList.toggle("sel",i===n);});saveSessions();}
+function saveDR(){const s=S();if(!s)return;s.devR=dRC;s.devN=(document.getElementById("drn")||{}).value||"";saveSessions();alert("Gespeichert ✓");}
+async function getDRF(){
+  const s=S();if(!s)return;
+  const o=document.getElementById("dki");o.classList.remove("hidden");
+  o.innerHTML='<span class="td"></span><span class="td"></span><span class="td"></span>';
+  try{const t=await callAPI([{role:"user",content:`Ausbildungslehrkraft ${s.fach} NRW. Entwicklungsziel: ${s.dg||"Reflexionsphasen verbessern"}.\nSelbsteinschätzung: ${s.devR||"keine"}\nNotiz: ${s.devN||"keine"}\n2–3 konkrete Hinweise max. 80 Wörter. Text, kein JSON.`}],300);
+  o.innerHTML=esc(t).replace(/\n/g,"<br>");}catch(e){o.innerHTML="⚠️ "+esc(e.message);}
+}
+
+// ═══════════════════════════════════════════════════
+// VERLAUFSPLAN
+// ═══════════════════════════════════════════════════
+function renderVP(){
+  const s=S();if(!s)return;
+  document.getElementById("vp-meta").innerHTML=`
+    <span>Fach: <strong>${esc(s.fach||"—")}</strong></span>
+    <span>Klasse: <strong>${esc(s.jgst||"—")}</strong></span>
+    <span>Typ: <strong>${s.typ==="ub"?s.ubNr+". UB":"Normale Stunde"}</strong></span>
+    ${s.selUV?`<span>UV: <strong>${esc(s.selUV.titel?.slice(0,50)||"")}…</strong></span>`:""}`;
+  document.getElementById("vp-tbody").innerHTML=(s.vp||[]).map((row,i)=>`
+    <tr>
+      <td contenteditable="true" onblur="svp(${i},'phase',this.innerText)">${esc(row.phase||"")}</td>
+      <td contenteditable="true" onblur="svp(${i},'g',this.innerText)">${esc(row.g||"")}${row.g?"":"<span class=\"vp-empty-note\"> — hier eintragen</span>"}</td>
+      <td contenteditable="true" onblur="svp(${i},'o',this.innerText)">${esc(row.o||"")}</td>
+      <td contenteditable="true" onblur="svp(${i},'k',this.innerText)">${esc(row.k||"")}</td>
+    </tr>`).join("");
+}
+function svp(i,f,v){const s=S();if(s&&s.vp[i]){s.vp[i][f]=v;saveSessions();}}
+function addVPRow(){const s=S();if(!s)return;s.vp.push({phase:"",g:"",o:"",k:""});renderVP();saveSessions();}
+
+// ═══════════════════════════════════════════════════
+// API
+// ═══════════════════════════════════════════════════
+async function callProxy(body){
+  const resp=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||resp.statusText);}
+  return resp.json();
+}
+
+async function callAPI(messages,maxTokens){
+  const data=await callProxy({max_tokens:maxTokens||600,system:bldSys(),messages});
+  return data.content.filter(b=>b.type==="text").map(b=>b.text).join("");
+}
+
+// ═══════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════
+function setInp(on){const ci=document.getElementById("ci"),bs=document.getElementById("btn-send");if(ci)ci.disabled=!on;if(bs)bs.disabled=!on;if(on&&ci)setTimeout(()=>ci.focus(),50);}
+function hk(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendAnswer();}}
+function ar(ta){ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,130)+"px";}
+function esc(t){return(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function cp(id){navigator.clipboard.writeText(document.getElementById(id)?.innerText||"").then(()=>alert("Kopiert!"));}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+if(!loadSessions())newSession();
+else switchSession(activeId);
+
+</script>
+</body>
+</html>
