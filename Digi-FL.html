@@ -508,10 +508,17 @@ const STEPS=[
     id:"dg", eyebrow:"Schritt 3", question:"Was ist dein aktuelles Entwicklungsziel?",
     sub:"Der Agent wird darauf besonders achten und am Ende Feedback geben.",
     render(s){
-      return `<textarea class="step-textarea" id="dg-ta" rows="3" placeholder="z.B. Gesprächs- und Reflexionsphasen qualitativ verbessern — offene Fragen, SuS-aktivierend, ausreichend Denkzeit…">${esc(s.dg||"")}</textarea>`;
+      return `<div class="chip-row" style="margin-bottom:.7rem;">
+        <div class="chip ${s.noDg?'sel':''}" onclick="toggleNoDg()">Kein Entwicklungsziel — nur Planungshilfe</div>
+      </div>
+      ${s.noDg?
+        `<p style="font-size:.82rem;color:var(--text2);line-height:1.55;">Alles klar — dann läuft die Planung ohne besonderen Entwicklungsschwerpunkt, einfach als reine Planungshilfe.</p>`
+        :
+        `<textarea class="step-textarea" id="dg-ta" rows="3" placeholder="z.B. Gesprächs- und Reflexionsphasen qualitativ verbessern — offene Fragen, SuS-aktivierend, ausreichend Denkzeit…">${esc(s.dg||"")}</textarea>`
+      }`;
     },
     canNext(s){return true;},
-    onNext(s){s.dg=document.getElementById("dg-ta")?.value.trim()||s.dg||"";}
+    onNext(s){if(!s.noDg)s.dg=document.getElementById("dg-ta")?.value.trim()||s.dg||"";}
   },
   // 3: Fach
   {
@@ -548,22 +555,32 @@ const STEPS=[
     render(s){
       const hasUVs=s.uvs&&s.uvs.length>0;
       const hasEmbedded=!!(UV_DATA[s.fach]&&UV_DATA[s.fach][s.jgst]&&UV_DATA[s.fach][s.jgst].length);
+      if(hasEmbedded&&!s.silpSrc&&!hasUVs){
+        return `<div class="step-options">
+          <div class="step-option" onclick="chooseSilpSrc('cfg')">
+            <span class="step-opt-icon">📚</span>
+            <div><div class="step-opt-label">CFG-SILP nutzen</div><div class="step-opt-sub">Hinterlegter Lehrplan für ${esc(s.fach)} · Jg. ${esc(s.jgst)}</div></div>
+          </div>
+          <div class="step-option" onclick="chooseSilpSrc('own')">
+            <span class="step-opt-icon">📄</span>
+            <div><div class="step-opt-label">Eigenen SILP hochladen</div><div class="step-opt-sub">PDF oder TXT eines eigenen Schulinternen Lehrplans</div></div>
+          </div>
+        </div>`;
+      }
+      const backLink=hasEmbedded?`<div style="font-size:.74rem;color:var(--blue);cursor:pointer;margin-bottom:.6rem;" onclick="resetSilpSrc()">◀ andere Quelle wählen</div>`:'';
       return `
         ${!hasUVs?`
-          ${hasEmbedded?`
-            <div style="padding:.6rem 0 .8rem;text-align:center;">
-              <div style="font-size:.82rem;color:var(--text2);font-weight:500;">⚡ SILP eingebettet — lade automatisch…</div>
-            </div>`:
-          `<div class="upload-zone" id="upload-zone" onclick="document.getElementById('silp-file').click()" style="margin-bottom:.8rem;">
+          ${backLink}
+          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('silp-file').click()" style="margin-bottom:.8rem;">
             <div class="upload-icon">📄</div>
             <div class="upload-title">SILP als PDF oder TXT hochladen</div>
             <div class="upload-sub">Klicken oder hierher ziehen</div>
           </div>
           <input type="file" id="silp-file" accept=".pdf,.txt,.md" style="display:none" onchange="handleSILP(this)">
-          <div id="silp-load" class="hidden"><div class="load-wrap"><div class="load-bar-outer"><div class="load-bar-inner"></div></div><div class="load-text" id="silp-load-text">Lade…</div><div class="load-sub" id="silp-load-sub"></div></div></div>`}
+          <div id="silp-load" class="hidden"><div class="load-wrap"><div class="load-bar-outer"><div class="load-bar-inner"></div></div><div class="load-text" id="silp-load-text">Lade…</div><div class="load-sub" id="silp-load-sub"></div></div></div>
           <div id="silp-status" class="step-status"></div>
         `:''}
-        ${hasUVs?`<div style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:.35rem;">${s.uvs.map(uv=>`
+        ${hasUVs?`${backLink}<div style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:.35rem;">${s.uvs.map(uv=>`
           <div class="step-option ${s.selUV&&s.selUV._uid===uv._uid?'sel':''}" onclick="stepSelUV('${uv._uid}')" style="flex-direction:column;align-items:flex-start;gap:.1rem;padding:.7rem .9rem;">
             <div class="step-opt-label" style="font-size:.83rem;line-height:1.4;">${esc(uv.titel)}</div>
             <div class="step-opt-sub">${esc(uv.bf||'')}${uv.std?' · '+uv.std+' Std.':''}</div>
@@ -643,7 +660,7 @@ function loadSessions(){
 
 function newSession(){
   const id="s"+Date.now();
-  sessions.push({id,name:"Neue Planung",typ:null,ubNr:"1",dg:"",fach:null,jgst:null,klp:"",uvs:[],selUV:null,selC:{bwk:[],mk:[],uk:[]},compCustom:"",lgCh:{size:[],leistung:[],beson:[]},lgFr:"",exchanges:[],apiH:[],curQ:null,phase:0,done:false,psum:[],devR:0,devN:"",result:null,curStep:0});
+  sessions.push({id,name:"Neue Planung",typ:null,ubNr:"1",dg:"",noDg:false,fach:null,jgst:null,klp:"",uvs:[],silpSrc:null,selUV:null,selC:{bwk:[],mk:[],uk:[]},compCustom:"",lgCh:{size:[],leistung:[],beson:[]},lgFr:"",exchanges:[],apiH:[],curQ:null,phase:0,done:false,psum:[],devR:0,devN:"",result:null,curStep:0});
   switchSession(id);
 }
 
@@ -802,14 +819,6 @@ function renderStep(){
       </div>
     </div>`;
   upHdr();
-  // Auto-extract from embedded SILP data
-  if(step.id==="silp"){
-    const s=S();
-    if(!s.uvs||!s.uvs.length){
-      const hasEmbedded=UV_DATA[s.fach]&&UV_DATA[s.fach][s.jgst];
-      if(hasEmbedded) setTimeout(()=>extractEmbeddedSILP(),150);
-    }
-  }
   // Re-attach drag&drop for SILP step
   if(step.id==="silp"){
     const uz=document.getElementById("upload-zone");
@@ -865,6 +874,10 @@ function pickN(field,val,el){
   el.closest("#step-body").querySelectorAll(".step-option").forEach(o=>o.classList.remove("sel"));
   el.classList.add("sel");
   saveSessions();
+}
+
+function toggleNoDg(){
+  const s=S(); s.noDg=!s.noDg; if(s.noDg)s.dg=""; saveSessions(); renderStep();
 }
 
 function pickFach(f,el){
@@ -963,6 +976,16 @@ function extractEmbeddedSILP(){
   s.uvs.forEach(uv=>s._uvMap[uv._uid]=uv);
   saveSessions();
   renderStep();
+}
+
+function chooseSilpSrc(src){
+  const s=S(); s.silpSrc=src; saveSessions();
+  if(src==="cfg")extractEmbeddedSILP();
+  else renderStep();
+}
+
+function resetSilpSrc(){
+  const s=S(); s.silpSrc=null; s.uvs=[]; s.selUV=null; s._uvMap={}; saveSessions(); renderStep();
 }
 
 async function handleSILP(inp){
@@ -1064,7 +1087,8 @@ function bldSys(){
   const dep=isUB?(s.ubNr==="upp"?"Das ist die Unterrichtspraktische Prüfung (UPP) im Rahmen der Staatsprüfung — fordere höchste Präzision, prüfe Kohärenz und Prüfungsreife kritisch.":s.ubNr<=1?"Frage einfach und direkt.":s.ubNr<=3?"Hake bei unscharfen Antworten nach.":"Fordere Präzision, prüfe Kohärenz kritisch."):"";
   const pUB=`PHASEN (7, UB):\n1.VORHABEN: Kompetenzziel Reihe (aktives Verb+Inhalt) · Stundenanzahl · Erkennbarkeit. Lerngruppe/UV bekannt — nicht nochmal fragen.\n2.VERORTUNG: Stunde Nr./von · davor · danach · Funktion · warum jetzt zwingend\n3.GEGENSTAND→THEMA: Gegenstand (nicht didaktisch reduziert) · Intention · Thema=Gegenstand+Intention\n4.KERNANLIEGEN: Dreiteilig: Unterrichtsaktivität + konkrete Fähigkeit + Kompetenzaufbau. Harter Operator (benennen/beschreiben/erläutern/beurteilen/demonstrieren — NICHT kennen/wissen).\n5.TEILLERNZIELE: Wissen · Können · Erleben · zentrales TLZ?\n6.KOHÄRENZ: Kernanliegen→Reihenziel · Verortung zwingend? · TLZ stimmig? · Reflexionsfragen (offen, SuS-aktivierend)\n7.MITTAGESSEN-TEST: Kind-Satz in Jugendsprache · deckt zentrales TLZ ab?`;
   const pNorm=`PHASEN (3, Normale Stunde):\n1.LERNGRUPPE & ZIEL: Stundenziel (konkret, beobachtbar) · Einbettung in Reihe\n2.STUNDENSTRUKTUR: Einstieg · Erarbeitung · Reflexion\n3.REFLEXIONSFRAGEN: 2–3 offene Fragen für die Reflexionsphase`;
-  return `Du bist Ausbildungslehrer ${s.fach} Gymnasium NRW.\n\nKLP ${s.fach}:\n${s.klp||KLP[s.fach]||""}\n\nJahrgangsstufe: ${s.jgst||"?"}\n${uvCtx}\nLERNGRUPPE: ${lg}\nENTWICKLUNGSZIEL: ${s.dg||"Gesprächs- und Reflexionsphasen verbessern"}\nART: ${isUB?(s.ubNr==="upp"?"Unterrichtspraktische Prüfung (UPP)":s.ubNr+". Unterrichtsbesuch"):"Normale Stunde"}\n${dep}\n\nAUFGABE: Strukturiertes Planungsgespräch. Pro Nachricht NUR EINE Frage.\n\n${isUB?pUB:pNorm}\n\nPHASENABSCHLUSS: [PE:N] und [SUM:Punkt1|Punkt2|Punkt3] am Anfang.\n\nTIPP: Bei Tipp-Anfragen: 2–3 Sätze Praxistipp für ${s.fach}, dann Frage erneut.\n\nABSCHLUSS — nur JSON:\n{"type":"result","kind":"...","eroeffnung":"...","reflexion":"...","hinweise":"..."}\n\nSonst JSON: {"type":"question","phase":N,"question":"...","hint":"...","feedback":"..."}\n\nNur gültiges JSON (außer bei PE/SUM). Per Du.`;
+  const dgLine=s.noDg?"ENTWICKLUNGSZIEL: keins — reine Planungshilfe ohne besonderen Entwicklungsschwerpunkt, dazu nichts erfragen.":`ENTWICKLUNGSZIEL: ${s.dg||"Gesprächs- und Reflexionsphasen verbessern"}`;
+  return `Du bist Ausbildungslehrer ${s.fach} Gymnasium NRW.\n\nKLP ${s.fach}:\n${s.klp||KLP[s.fach]||""}\n\nJahrgangsstufe: ${s.jgst||"?"}\n${uvCtx}\nLERNGRUPPE: ${lg}\n${dgLine}\nART: ${isUB?(s.ubNr==="upp"?"Unterrichtspraktische Prüfung (UPP)":s.ubNr+". Unterrichtsbesuch"):"Normale Stunde"}\n${dep}\n\nAUFGABE: Strukturiertes Planungsgespräch. Pro Nachricht NUR EINE Frage.\n\n${isUB?pUB:pNorm}\n\nPHASENABSCHLUSS: [PE:N] und [SUM:Punkt1|Punkt2|Punkt3] am Anfang.\n\nTIPP: Bei Tipp-Anfragen: 2–3 Sätze Praxistipp für ${s.fach}, dann Frage erneut.\n\nABSCHLUSS — nur JSON:\n{"type":"result","kind":"...","eroeffnung":"...","reflexion":"...","hinweise":"..."}\n\nSonst JSON: {"type":"question","phase":N,"question":"...","hint":"...","feedback":"..."}\n\nNur gültiges JSON (außer bei PE/SUM). Per Du.`;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1271,6 +1295,7 @@ function renderResults(){
     <div class="res-card fu"><div class="res-card-head">💬 Reflexionsfragen <button class="copy-btn" onclick="cp('rr')">Kopieren</button></div><div class="res-card-body" id="rr">${esc(d.reflexion||"").replace(/\n/g,"<br>")}</div></div>
     <div class="res-card fu"><div class="res-card-head">⚠️ Kohärenz-Hinweise</div><div class="res-card-body">${esc(d.hinweise||"").replace(/\n/g,"<br>")}</div></div>
     <div class="dev-card fu">
+      ${!s.noDg?`
       <h4>🎯 Nach der Stunde: Entwicklungsziel-Reflexion</h4>
       <p style="font-size:.8rem;color:var(--purple);margin-bottom:.3rem;">Entwicklungsziel: ${esc(s.dg||"Reflexionsphasen verbessern")}</p>
       <div class="dev-rating">${[1,2,3,4,5].map(n=>`<button onclick="setDR(${n})" id="dr${n}" class="${(s.devR||0)===n?"sel":""}">${n}</button>`).join("")}</div>
@@ -1281,6 +1306,11 @@ function renderResults(){
         <button class="btn-ghost" style="font-size:.8rem;padding:.4rem .95rem;margin-left:auto;" onclick="newSession()">＋ Neue Planung</button>
       </div>
       <div id="dki" class="dev-ki-out hidden"></div>
+      `:`
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn-ghost" onclick="newSession()">＋ Neue Planung</button>
+      </div>
+      `}
     </div>`;
 }
 
