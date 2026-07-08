@@ -6,6 +6,7 @@
 <title>UB-Planungshilfe</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -408,6 +409,15 @@ textarea#ci::placeholder { color: var(--text3); }
   <div class="sb-list" id="sb-list-reihen" style="flex:none;border-top:1px solid var(--border);"></div>
   <button class="btn-new" onclick="newSession()"><span style="font-size:.9rem">＋</span><span>Neue Planung</span></button>
   <button class="btn-new" onclick="newReihe()"><span style="font-size:.9rem">📚</span><span>Neue Reihe</span></button>
+  <div id="auth-status" style="padding:.6rem .95rem;border-top:1px solid var(--border);font-size:.72rem;color:var(--text2);"></div>
+</div>
+<div id="auth-overlay" class="hidden" style="position:fixed;inset:0;z-index:200;background:rgba(20,20,22,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
+  <div class="step-card" style="max-width:380px;width:90%;">
+    <div class="step-eyebrow" id="auth-eyebrow">Anmelden</div>
+    <div class="step-question" style="font-size:1.05rem;">Bei Digi-FL anmelden</div>
+    <div class="step-sub">Damit deine Planungen geräteübergreifend gespeichert werden.</div>
+    <div id="auth-body"></div>
+  </div>
 </div>
 <div class="main">
   <div class="topbar" id="topbar">
@@ -468,6 +478,128 @@ let reihen=[], activeReihenId=null;
 let currentMode="session"; // "session" | "reihe" — which sidebar list is active
 const S=()=>sessions.find(s=>s.id===activeId);
 const R=()=>reihen.find(r=>r.id===activeReihenId);
+
+// ═══════════════════════════════════════════════════
+// ACCOUNTS (Supabase) — optional: die App funktioniert unverändert lokal,
+// Anmelden synchronisiert Planungen/Reihen zusätzlich geräteübergreifend.
+// ═══════════════════════════════════════════════════
+const SUPABASE_URL="https://hlentopvrxmhuznfyzpa.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_PcZKINUhPzxOUI_jX4lAFA_VgGYBMNc";
+const sb=(typeof supabase!=="undefined")?supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
+let currentUser=null;
+let cloudSyncTimer=null;
+
+function renderAuthStatus(){
+  const el=document.getElementById("auth-status");if(!el)return;
+  if(currentUser){
+    el.innerHTML=`✓ ${esc(currentUser.email)}<br><span style="color:var(--blue);cursor:pointer;" onclick="signOut()">Abmelden</span>`;
+  }else{
+    el.innerHTML=`<span style="color:var(--blue);cursor:pointer;" onclick="showAuthScreen('signin')">🔐 Anmelden</span>`;
+  }
+}
+
+function showAuthScreen(mode){
+  document.getElementById("auth-overlay").classList.remove("hidden");
+  renderAuthForm(mode||"signin");
+}
+function hideAuthScreen(){document.getElementById("auth-overlay").classList.add("hidden");}
+
+function renderAuthForm(mode){
+  const isSignup=mode==="signup";
+  document.getElementById("auth-eyebrow").textContent=isSignup?"Registrieren":"Anmelden";
+  document.getElementById("auth-body").innerHTML=`
+    <div id="auth-err" style="display:none;background:var(--red-bg);color:var(--red);font-size:.78rem;padding:.5rem .7rem;border-radius:var(--radius-xs);margin-bottom:.7rem;"></div>
+    <input class="dg-input" id="auth-email" type="email" placeholder="E-Mail" style="margin-bottom:.6rem;" autocomplete="email">
+    <input class="dg-input" id="auth-pass" type="password" placeholder="Passwort (mind. 6 Zeichen)" style="margin-bottom:.6rem;" autocomplete="${isSignup?'new-password':'current-password'}">
+    ${isSignup?`<input class="dg-input" id="auth-school" type="text" placeholder="Schule (z.B. Carl-Fuhlrott-Gymnasium)" style="margin-bottom:.6rem;">`:""}
+    <button class="btn-primary" style="width:100%;margin-bottom:.6rem;" onclick="${isSignup?'doSignUp()':'doSignIn()'}">${isSignup?"Registrieren":"Anmelden"}</button>
+    <div style="text-align:center;font-size:.78rem;color:var(--text2);">
+      ${isSignup?`Schon registriert? <span style="color:var(--blue);cursor:pointer;" onclick="renderAuthForm('signin')">Anmelden</span>`
+                :`Noch kein Account? <span style="color:var(--blue);cursor:pointer;" onclick="renderAuthForm('signup')">Registrieren</span>`}
+    </div>
+    <div style="text-align:center;margin-top:.6rem;"><span style="font-size:.74rem;color:var(--text3);cursor:pointer;" onclick="hideAuthScreen()">Abbrechen</span></div>`;
+}
+
+function authErr(msg){
+  const el=document.getElementById("auth-err");if(!el)return;
+  el.textContent=msg; el.style.display="block";
+}
+
+async function doSignUp(){
+  if(!sb)return authErr("Kein Supabase-Client verfügbar.");
+  const email=document.getElementById("auth-email").value.trim();
+  const pass=document.getElementById("auth-pass").value;
+  const school=document.getElementById("auth-school")?.value.trim()||"";
+  if(!email||pass.length<6)return authErr("Bitte gültige E-Mail und Passwort (mind. 6 Zeichen) eingeben.");
+  const {data,error}=await sb.auth.signUp({email,password:pass});
+  if(error)return authErr(error.message);
+  if(data.user&&school){
+    await sb.from("profiles").upsert({id:data.user.id,school});
+  }
+  if(!data.session){
+    authErr("Fast fertig — bitte bestätige den Link in der E-Mail, die wir dir geschickt haben, und melde dich danach an.");
+    return;
+  }
+  hideAuthScreen();
+}
+
+async function doSignIn(){
+  if(!sb)return authErr("Kein Supabase-Client verfügbar.");
+  const email=document.getElementById("auth-email").value.trim();
+  const pass=document.getElementById("auth-pass").value;
+  if(!email||!pass)return authErr("Bitte E-Mail und Passwort eingeben.");
+  const {error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error)return authErr(error.message);
+  hideAuthScreen();
+}
+
+async function signOut(){
+  if(!sb)return;
+  await sb.auth.signOut();
+}
+
+// Beim Einloggen: falls in der Cloud schon Daten liegen, gelten die als
+// Quelle der Wahrheit (Sync von einem anderen Gerät). Sonst wird der
+// aktuelle lokale Stand einmalig hochgeladen, damit nichts verloren geht.
+async function pullOrSeedCloudState(){
+  if(!sb||!currentUser)return;
+  const {data,error}=await sb.from("app_state").select("sessions,reihen").eq("user_id",currentUser.id).maybeSingle();
+  if(error)return;
+  if(data&&((data.sessions&&data.sessions.length)||(data.reihen&&data.reihen.length))){
+    if(data.sessions&&data.sessions.length){sessions=data.sessions;activeId=sessions[0].id;}
+    if(data.reihen)reihen=data.reihen;
+    saveSessions(); saveReihen();
+    currentMode="session"; switchSession(activeId);
+  }else{
+    pushCloudStateNow();
+  }
+}
+
+function pushCloudState(){
+  if(!sb||!currentUser)return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer=setTimeout(pushCloudStateNow,1200);
+}
+async function pushCloudStateNow(){
+  if(!sb||!currentUser)return;
+  try{
+    await sb.from("app_state").upsert({user_id:currentUser.id,sessions,reihen,updated_at:new Date().toISOString()});
+  }catch(e){}
+}
+
+function initAuth(){
+  if(!sb)return;
+  sb.auth.getSession().then(({data})=>{
+    currentUser=data.session?data.session.user:null;
+    renderAuthStatus();
+    if(currentUser)pullOrSeedCloudState();
+  });
+  sb.auth.onAuthStateChange((event,session)=>{
+    currentUser=session?session.user:null;
+    renderAuthStatus();
+    if(event==="SIGNED_IN")pullOrSeedCloudState();
+  });
+}
 
 // Current step index (0-based through STEPS array)
 let curStep=0;
@@ -652,6 +784,7 @@ const STEPS=[
 // ═══════════════════════════════════════════════════
 function saveSessions(){
   try{localStorage.setItem("ub_sessions",JSON.stringify({sessions,activeId}));}catch(e){}
+  pushCloudState();
 }
 function loadSessions(){
   try{
@@ -670,6 +803,7 @@ function loadSessions(){
 // ═══════════════════════════════════════════════════
 function saveReihen(){
   try{localStorage.setItem("ub_reihen",JSON.stringify({reihen,activeReihenId}));}catch(e){}
+  pushCloudState();
 }
 function loadReihen(){
   try{
@@ -1577,6 +1711,8 @@ function cp(id){navigator.clipboard.writeText(document.getElementById(id)?.inner
 loadReihen();
 if(!loadSessions())newSession();
 else switchSession(activeId);
+renderAuthStatus();
+initAuth();
 
 </script>
 </body>
