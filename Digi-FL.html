@@ -405,7 +405,9 @@ textarea#ci::placeholder { color: var(--text3); }
 <div class="sidebar">
   <div class="sb-head"><div class="sb-logo">Referendariat NRW</div><h1>UB-Planungshilfe</h1><p>Gymnasium · Sek I</p></div>
   <div class="sb-list" id="sb-list"></div>
+  <div class="sb-list" id="sb-list-reihen" style="flex:none;border-top:1px solid var(--border);"></div>
   <button class="btn-new" onclick="newSession()"><span style="font-size:.9rem">＋</span><span>Neue Planung</span></button>
+  <button class="btn-new" onclick="newReihe()"><span style="font-size:.9rem">📚</span><span>Neue Reihe</span></button>
 </div>
 <div class="main">
   <div class="topbar" id="topbar">
@@ -437,6 +439,8 @@ textarea#ci::placeholder { color: var(--text3); }
       </div>
       <!-- RESULTS -->
       <div class="hidden" id="screen-results"><div class="res-wrap" id="res-area"></div></div>
+      <!-- REIHE -->
+      <div class="hidden" id="screen-reihe"><div class="res-wrap" id="reihe-area"></div></div>
     </div>
   </div>
   <div class="ibar hidden" id="ibar">
@@ -460,7 +464,10 @@ const LG_CHIPS={size:["< 20 SuS","20–28 SuS","> 28 SuS"],leistung:["leistungsh
 // STATE
 // ═══════════════════════════════════════════════════
 let sessions=[], activeId=null;
+let reihen=[], activeReihenId=null;
+let currentMode="session"; // "session" | "reihe" — which sidebar list is active
 const S=()=>sessions.find(s=>s.id===activeId);
+const R=()=>reihen.find(r=>r.id===activeReihenId);
 
 // Current step index (0-based through STEPS array)
 let curStep=0;
@@ -658,14 +665,181 @@ function loadSessions(){
   }catch(e){return false;}
 }
 
+// ═══════════════════════════════════════════════════
+// REIHEN (Reihenplanung)
+// ═══════════════════════════════════════════════════
+function saveReihen(){
+  try{localStorage.setItem("ub_reihen",JSON.stringify({reihen,activeReihenId}));}catch(e){}
+}
+function loadReihen(){
+  try{
+    const raw=localStorage.getItem("ub_reihen");
+    if(!raw)return;
+    const d=JSON.parse(raw);
+    reihen=d.reihen||[];
+    activeReihenId=reihen.find(r=>r.id===d.activeReihenId)?d.activeReihenId:null;
+  }catch(e){}
+}
+
+function mkStunde(titel){return {id:"st"+Date.now()+Math.random().toString(36).slice(2,6),titel:titel||"",kurz:"",planungId:null};}
+
+function newReihe(){
+  const id="r"+Date.now();
+  reihen.push({id,name:"Neue Reihe",fach:null,jgst:null,stunden:[mkStunde("")]});
+  switchReihe(id);
+}
+
+function switchReihe(id){
+  currentMode="reihe"; activeReihenId=id; saveReihen(); renderSB(); showReiheEditor();
+}
+
+function delReihe(id,e){
+  e.stopPropagation();
+  reihen=reihen.filter(r=>r.id!==id);
+  saveReihen();
+  if(activeReihenId===id){
+    activeReihenId=null;
+    if(sessions.length){switchSession(activeId||sessions[0].id);}
+  }
+  renderSB();
+}
+
+function renameReiheField(field,val){const r=R();if(r){r[field]=val;saveReihen();}}
+
+function reiheSetFach(f,el){
+  const r=R();if(!r)return; r.fach=f; r.klp=KLP[f]||"";
+  el.closest("#reihe-area").querySelectorAll(".fach-card").forEach(o=>{o.classList.remove("sel");o.style.background="";});
+  el.classList.add("sel");
+  saveReihen();
+}
+function reiheSetJg(j,el){
+  const r=R();if(!r)return; r.jgst=j;
+  el.closest("#reihe-area").querySelectorAll(".jg-chip").forEach(o=>o.classList.remove("sel"));
+  el.classList.add("sel");
+  saveReihen();
+}
+
+function addStunde(){
+  const r=R();if(!r)return;
+  r.stunden.push(mkStunde(""));
+  saveReihen(); renderReiheEditor();
+}
+function removeStunde(idx){
+  const r=R();if(!r)return;
+  if(r.stunden.length<=1){alert("Mindestens eine Stunde.");return;}
+  r.stunden.splice(idx,1);
+  saveReihen(); renderReiheEditor();
+}
+function moveStunde(idx,dir){
+  const r=R();if(!r)return;
+  const j=idx+dir;
+  if(j<0||j>=r.stunden.length)return;
+  [r.stunden[idx],r.stunden[j]]=[r.stunden[j],r.stunden[idx]];
+  saveReihen(); renderReiheEditor();
+}
+function editStunde(idx,field,val){
+  const r=R();if(!r||!r.stunden[idx])return;
+  r.stunden[idx][field]=val;
+  saveReihen();
+}
+
+// Erstellt (oder öffnet, falls schon vorhanden) die volle Einzelplanung für
+// eine Stunde aus der Reihen-Outline, inkl. Kontext zu Vorgänger/Nachfolger
+// für eine kohärente VERORTUNG.
+function planReiheStunde(idx){
+  const r=R();if(!r)return;
+  const st=r.stunden[idx];if(!st)return;
+  if(st.planungId&&sessions.find(s=>s.id===st.planungId)){
+    switchSession(st.planungId);
+    return;
+  }
+  const id="s"+Date.now();
+  const s=mkSessionObj(id);
+  s.name=st.titel||("Stunde "+(idx+1));
+  s.fach=r.fach; s.jgst=r.jgst; s.klp=r.klp||KLP[r.fach]||"";
+  s.reiheCtx={reiheId:r.id,name:r.name,position:idx+1,total:r.stunden.length,prevTitel:r.stunden[idx-1]?r.stunden[idx-1].titel:"",nextTitel:r.stunden[idx+1]?r.stunden[idx+1].titel:""};
+  sessions.push(s);
+  st.planungId=id;
+  saveReihen(); saveSessions();
+  switchSession(id);
+}
+
+// "Umgekehrt": eine bestehende, schon geplante Stunde nachträglich in eine
+// Reihe einordnen (an letzter Position anhängen).
+function assignSessionToReihe(reiheId){
+  const s=S();const r=reihen.find(x=>x.id===reiheId);
+  if(!s||!r)return;
+  const st=mkStunde(s.name);
+  st.planungId=s.id;
+  r.stunden.push(st);
+  if(!r.fach)r.fach=s.fach;
+  if(!r.jgst)r.jgst=s.jgst;
+  s.reiheCtx={reiheId:r.id,name:r.name,position:r.stunden.length,total:r.stunden.length,prevTitel:r.stunden.length>1?r.stunden[r.stunden.length-2].titel:"",nextTitel:""};
+  saveReihen(); saveSessions();
+  alert(`Zu „${r.name}" hinzugefügt ✓`);
+  renderResults();
+}
+
+function renderReiheEditor(){
+  const r=R();if(!r)return;
+  document.getElementById("tb-meta").textContent="Reihenplanung";
+  document.getElementById("tb-title").textContent=r.name;
+  document.getElementById("phase-dots").innerHTML="";
+  document.getElementById("prog-fill").style.width="0%";
+  const planned=r.stunden.filter(st=>st.planungId).length;
+  document.getElementById("reihe-area").innerHTML=`
+    <div class="res-card fu">
+      <div class="res-card-body" style="padding-top:1rem;">
+        <div class="s-label" style="margin-bottom:.3rem;">Titel der Reihe</div>
+        <input class="dg-input" style="margin-bottom:1rem;" value="${esc(r.name)}" onblur="renameReiheField('name',this.value.trim()||'Neue Reihe');renderSB();" onkeydown="if(event.key==='Enter')this.blur();">
+        <div class="s-label" style="margin-bottom:.5rem;">Fach</div>
+        <div class="fach-grid" style="margin-bottom:1rem;">${Object.entries(FACH_DATA).map(([f,d])=>
+          `<div class="fach-card ${r.fach===f?'sel':''}" style="--fc:${d.color}${r.fach===f?';background:'+d.bg:''}" onclick="reiheSetFach('${f}',this)">
+            <div class="fc-emoji">${d.emoji}</div><div class="fc-name">${f}</div>
+          </div>`).join("")}</div>
+        <div class="s-label" style="margin-bottom:.5rem;">Jahrgangsstufe</div>
+        <div class="jgst-grid" style="margin-bottom:.5rem;">${["5","6","7","8","9","10","EF","Q1","Q2"].map(j=>
+          `<div class="jg-chip ${r.jgst===j?'sel':''}" onclick="reiheSetJg('${j}',this)">${j}</div>`).join("")}</div>
+      </div>
+    </div>
+    <div class="res-card fu">
+      <div class="res-card-head">Stundenübersicht · ${planned}/${r.stunden.length} ausgeplant</div>
+      <div class="res-card-body" style="padding:.6rem .9rem;display:flex;flex-direction:column;gap:.5rem;">
+        ${r.stunden.map((st,i)=>`
+          <div class="uv-card" style="padding:.65rem .8rem;">
+            <div style="display:flex;gap:.5rem;align-items:flex-start;">
+              <div style="flex-shrink:0;display:flex;flex-direction:column;gap:.15rem;padding-top:.3rem;">
+                <button class="qa-nav-btn" style="width:22px;height:22px;font-size:.65rem;" onclick="moveStunde(${i},-1)" ${i===0?"disabled":""}>▲</button>
+                <button class="qa-nav-btn" style="width:22px;height:22px;font-size:.65rem;" onclick="moveStunde(${i},1)" ${i===r.stunden.length-1?"disabled":""}>▼</button>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:.68rem;font-weight:700;color:var(--text3);margin-bottom:.25rem;">STUNDE ${i+1}${st.planungId?" · ✓ ausgeplant":""}</div>
+                <input class="dg-input" style="margin-bottom:.35rem;padding:.4rem .6rem;font-size:.85rem;" placeholder="Thema der Stunde…" value="${esc(st.titel)}" onblur="editStunde(${i},'titel',this.value.trim())" onkeydown="if(event.key==='Enter')this.blur();">
+                <textarea class="custom-comp-input" rows="1" placeholder="Kurznotiz (optional)…" onblur="editStunde(${i},'kurz',this.value.trim())">${esc(st.kurz)}</textarea>
+              </div>
+              <div style="flex-shrink:0;display:flex;flex-direction:column;gap:.3rem;">
+                <button class="btn-ghost" style="font-size:.72rem;padding:.32rem .6rem;white-space:nowrap;" onclick="planReiheStunde(${i})">${st.planungId?"Öffnen →":"Ausplanen →"}</button>
+                <button class="sess-del" style="opacity:1;" onclick="removeStunde(${i})">✕</button>
+              </div>
+            </div>
+          </div>`).join("")}
+        <button class="btn-ghost" onclick="addStunde()">＋ Stunde hinzufügen</button>
+      </div>
+    </div>`;
+}
+
+function mkSessionObj(id){
+  return {id,name:"Neue Planung",typ:null,ubNr:"1",dg:"",noDg:false,fach:null,jgst:null,klp:"",uvs:[],silpSrc:null,selUV:null,selC:{bwk:[],mk:[],uk:[]},compCustom:"",lgCh:{size:[],leistung:[],beson:[]},lgFr:"",exchanges:[],apiH:[],curQ:null,phase:0,done:false,psum:[],devR:0,devN:"",result:null,curStep:0,reiheCtx:null};
+}
+
 function newSession(){
   const id="s"+Date.now();
-  sessions.push({id,name:"Neue Planung",typ:null,ubNr:"1",dg:"",noDg:false,fach:null,jgst:null,klp:"",uvs:[],silpSrc:null,selUV:null,selC:{bwk:[],mk:[],uk:[]},compCustom:"",lgCh:{size:[],leistung:[],beson:[]},lgFr:"",exchanges:[],apiH:[],curQ:null,phase:0,done:false,psum:[],devR:0,devN:"",result:null,curStep:0});
+  sessions.push(mkSessionObj(id));
   switchSession(id);
 }
 
 function switchSession(id){
-  activeId=id; saveSessions(); renderSB();
+  currentMode="session"; activeId=id; saveSessions(); renderSB();
   const s=S();
   if(s.done){showRes();}
   else if(s.phase>0||s.curQ){showQA();}
@@ -718,14 +892,25 @@ function delSess(id,e){
 
 function renderSB(){
   document.getElementById("sb-list").innerHTML=sessions.map(s=>`
-    <div class="sess ${s.id===activeId?"active":""} ${s.done?"done":""}" onclick="switchSession('${s.id}')">
+    <div class="sess ${currentMode==="session"&&s.id===activeId?"active":""} ${s.done?"done":""}" onclick="switchSession('${s.id}')">
       <div class="sess-dot"></div>
       <div class="sess-info">
         <span class="sess-name" id="sn-${s.id}" onclick="renSess('${s.id}',event)">${esc(s.name)}</span>
-        ${s.fach?`<div class="sess-sub">${esc(s.fach)}${s.jgst?" · "+jgstShort(s.jgst):""}</div>`:""}
+        ${s.fach?`<div class="sess-sub">${esc(s.fach)}${s.jgst?" · "+jgstShort(s.jgst):""}${s.reiheCtx?" · ↳ "+esc(s.reiheCtx.name):""}</div>`:""}
       </div>
       <button class="sess-del" onclick="delSess('${s.id}',event)">✕</button>
     </div>`).join("");
+  document.getElementById("sb-list-reihen").innerHTML=reihen.map(r=>{
+    const planned=r.stunden.filter(st=>st.planungId).length;
+    return `<div class="sess ${currentMode==="reihe"&&r.id===activeReihenId?"active":""}" onclick="switchReihe('${r.id}')">
+      <span style="flex-shrink:0;font-size:.85rem;">📚</span>
+      <div class="sess-info">
+        <span class="sess-name">${esc(r.name)}</span>
+        <div class="sess-sub">${r.fach?esc(r.fach)+" · ":""}${planned}/${r.stunden.length} ausgeplant</div>
+      </div>
+      <button class="sess-del" onclick="delReihe('${r.id}',event)">✕</button>
+    </div>`;
+  }).join("");
 }
 
 function renSess(id,e){
@@ -776,7 +961,7 @@ function jumpStep(i){
 // SCREEN MANAGEMENT
 // ═══════════════════════════════════════════════════
 function hideAll(){
-  ["step-screen","screen-qa","screen-results"].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add("hidden");});
+  ["step-screen","screen-qa","screen-results","screen-reihe"].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add("hidden");});
   document.getElementById("ibar").classList.add("hidden");
 }
 function showStepScreen(){hideAll();document.getElementById("step-screen").classList.remove("hidden");renderStep();}
@@ -790,6 +975,7 @@ function showQA(){
   renderThread();
 }
 function showRes(){hideAll();document.getElementById("screen-results").classList.remove("hidden");renderResults();renderSB();}
+function showReiheEditor(){hideAll();document.getElementById("screen-reihe").classList.remove("hidden");renderReiheEditor();renderSB();}
 
 // ═══════════════════════════════════════════════════
 // STEP ENGINE
@@ -1084,11 +1270,13 @@ function bldSys(){
   const compLines=s.selUV?uvKompCats(s.selUV).filter(([,items])=>items&&items.length).map(([label])=>`${label}: ${((s.selC&&s.selC[label])||[]).join(" | ")||"alle"}`).join("\n"):"";
   const comp=s.selUV?`\nGewählte Kompetenzen:\n${compLines}${s.compCustom?"\nEig.: "+s.compCustom:""}`:""
   const uvCtx=s.selUV?`\nUV: ${s.selUV.titel} · ${s.selUV.bf||""} · IF: ${(s.selUV.if_||[]).join(",")} · ${s.selUV.std||"?"} Std.${comp}`:"Freie Planung.";
+  const reiheCtx=s.reiheCtx?`\nREIHENKONTEXT: Teil der Reihe „${s.reiheCtx.name}", Stunde ${s.reiheCtx.position} von ${s.reiheCtx.total}. Davor: ${s.reiheCtx.prevTitel||"–"}. Danach: ${s.reiheCtx.nextTitel||"–"}. Nutze das direkt für VERORTUNG — nicht nochmal danach fragen.`:"";
   const dep=isUB?(s.ubNr==="upp"?"Das ist die Unterrichtspraktische Prüfung (UPP) im Rahmen der Staatsprüfung — fordere höchste Präzision, prüfe Kohärenz und Prüfungsreife kritisch.":s.ubNr<=1?"Frage einfach und direkt.":s.ubNr<=3?"Hake bei unscharfen Antworten nach.":"Fordere Präzision, prüfe Kohärenz kritisch."):"";
   const pUB=`PHASEN (7, UB):\n1.VORHABEN: Kompetenzziel Reihe (aktives Verb+Inhalt) · Stundenanzahl · Erkennbarkeit. Lerngruppe/UV bekannt — nicht nochmal fragen.\n2.VERORTUNG: Stunde Nr./von · davor · danach · Funktion · warum jetzt zwingend\n3.GEGENSTAND→THEMA: Gegenstand (nicht didaktisch reduziert) · Intention · Thema=Gegenstand+Intention\n4.KERNANLIEGEN: Dreiteilig: Unterrichtsaktivität + konkrete Fähigkeit + Kompetenzaufbau. Harter Operator (benennen/beschreiben/erläutern/beurteilen/demonstrieren — NICHT kennen/wissen).\n5.TEILLERNZIELE: Wissen · Können · Erleben · zentrales TLZ?\n6.KOHÄRENZ: Kernanliegen→Reihenziel · Verortung zwingend? · TLZ stimmig? · Reflexionsfragen (offen, SuS-aktivierend)\n7.MITTAGESSEN-TEST: Kind-Satz in Jugendsprache · deckt zentrales TLZ ab?`;
   const pNorm=`PHASEN (3, Normale Stunde):\n1.LERNGRUPPE & ZIEL: Stundenziel (konkret, beobachtbar) · Einbettung in Reihe\n2.STUNDENSTRUKTUR: Einstieg · Erarbeitung · Reflexion\n3.REFLEXIONSFRAGEN: 2–3 offene Fragen für die Reflexionsphase`;
   const dgLine=s.noDg?"ENTWICKLUNGSZIEL: keins — reine Planungshilfe ohne besonderen Entwicklungsschwerpunkt, dazu nichts erfragen.":`ENTWICKLUNGSZIEL: ${s.dg||"Gesprächs- und Reflexionsphasen verbessern"}`;
-  return `Du bist Ausbildungslehrer ${s.fach} Gymnasium NRW.\n\nKLP ${s.fach}:\n${s.klp||KLP[s.fach]||""}\n\nJahrgangsstufe: ${s.jgst||"?"}\n${uvCtx}\nLERNGRUPPE: ${lg}\n${dgLine}\nART: ${isUB?(s.ubNr==="upp"?"Unterrichtspraktische Prüfung (UPP)":s.ubNr+". Unterrichtsbesuch"):"Normale Stunde"}\n${dep}\n\nAUFGABE: Strukturiertes Planungsgespräch. Pro Nachricht NUR EINE Frage.\n\n${isUB?pUB:pNorm}\n\nPHASENABSCHLUSS: [PE:N] und [SUM:Punkt1|Punkt2|Punkt3] am Anfang.\n\nTIPP: Bei Tipp-Anfragen: 2–3 Sätze Praxistipp für ${s.fach}, dann Frage erneut.\n\nABSCHLUSS — nur JSON:\n{"type":"result","kind":"...","eroeffnung":"...","reflexion":"...","hinweise":"..."}\n\nSonst JSON: {"type":"question","phase":N,"question":"...","hint":"...","feedback":"..."}\n\nNur gültiges JSON (außer bei PE/SUM). Per Du.`;
+  const haltung=`HALTUNG: Urteile ausschließlich nach fachwissenschaftlichen und fachdidaktischen Standards (KLP NRW, aktueller fachdidaktischer Konsens) — nicht danach, was die planende Person hören will. Widersprich unpräzisen, fachlich unbegründeten oder didaktisch fragwürdigen Aussagen konsequent und benenne warum, auch bei Widerspruch oder Insistieren. Diese Kriterien und dein Anspruchsniveau bleiben über das gesamte Gespräch identisch — kein Nachgeben, kein beschwichtigendes Zustimmen.`;
+  return `Du bist Ausbildungslehrer ${s.fach} Gymnasium NRW.\n\n${haltung}\n\nKLP ${s.fach}:\n${s.klp||KLP[s.fach]||""}\n\nJahrgangsstufe: ${s.jgst||"?"}\n${uvCtx}${reiheCtx}\nLERNGRUPPE: ${lg}\n${dgLine}\nART: ${isUB?(s.ubNr==="upp"?"Unterrichtspraktische Prüfung (UPP)":s.ubNr+". Unterrichtsbesuch"):"Normale Stunde"}\n${dep}\n\nAUFGABE: Strukturiertes Planungsgespräch. Pro Nachricht NUR EINE Frage.\n\n${isUB?pUB:pNorm}\n\nPHASENABSCHLUSS: [PE:N] und [SUM:Punkt1|Punkt2|Punkt3] am Anfang.\n\nTIPP: Bei Tipp-Anfragen: 2–3 Sätze Praxistipp für ${s.fach}, dann Frage erneut.\n\nABSCHLUSS — nur JSON:\n{"type":"result","kind":"...","eroeffnung":"...","reflexion":"...","hinweise":"..."}\n\nSonst JSON: {"type":"question","phase":N,"question":"...","hint":"...","feedback":"..."}\n\nNur gültiges JSON (außer bei PE/SUM). Per Du.`;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1282,6 +1470,11 @@ async function askTip(){
 let dRC=0;
 function renderResults(){
   const s=S(); const d=s.result||{};
+  const reiheBlock=s.reiheCtx?
+    `<div class="res-card fu"><div class="res-card-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;"><span>↳ Teil der Reihe <strong>${esc(s.reiheCtx.name)}</strong> · Stunde ${s.reiheCtx.position}/${s.reiheCtx.total}</span><button class="btn-ghost" style="font-size:.75rem;padding:.3rem .7rem;" onclick="switchReihe('${s.reiheCtx.reiheId}')">Zur Reihe →</button></div></div>`
+    :(reihen.length?
+    `<div class="res-card fu"><div class="res-card-body" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;"><span style="font-size:.82rem;color:var(--text2);">In eine Reihe einordnen:</span><select id="reihe-pick" class="dg-input" style="width:auto;padding:.3rem .6rem;font-size:.82rem;">${reihen.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join("")}</select><button class="btn-ghost" style="font-size:.75rem;padding:.3rem .7rem;" onclick="assignSessionToReihe(document.getElementById('reihe-pick').value)">Zuordnen</button></div></div>`
+    :"");
   document.getElementById("res-area").innerHTML=`
     <div class="res-hero fu">
       <div class="res-hero-label">🥗 Mittagessen-Test</div>
@@ -1294,6 +1487,7 @@ function renderResults(){
     <div class="res-card fu"><div class="res-card-head">🎤 Eröffnungssatz <button class="copy-btn" onclick="cp('re')">Kopieren</button></div><div class="res-card-body" id="re">${esc(d.eroeffnung||"").replace(/\n/g,"<br>")}</div></div>
     <div class="res-card fu"><div class="res-card-head">💬 Reflexionsfragen <button class="copy-btn" onclick="cp('rr')">Kopieren</button></div><div class="res-card-body" id="rr">${esc(d.reflexion||"").replace(/\n/g,"<br>")}</div></div>
     <div class="res-card fu"><div class="res-card-head">⚠️ Kohärenz-Hinweise</div><div class="res-card-body">${esc(d.hinweise||"").replace(/\n/g,"<br>")}</div></div>
+    ${reiheBlock}
     <div class="dev-card fu">
       ${!s.noDg?`
       <h4>🎯 Nach der Stunde: Entwicklungsziel-Reflexion</h4>
@@ -1380,6 +1574,7 @@ function cp(id){navigator.clipboard.writeText(document.getElementById(id)?.inner
 // ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
+loadReihen();
 if(!loadSessions())newSession();
 else switchSession(activeId);
 
