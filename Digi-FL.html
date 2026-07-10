@@ -623,6 +623,10 @@ const STEPS=[
           <span class="step-opt-icon">🎯</span>
           <div><div class="step-opt-label">Unterrichtsbesuch (UB)</div><div class="step-opt-sub">Vollständige 7-Phasen-Planung mit Kernanliegen</div></div>
         </div>
+        <div class="step-option" onclick="startReiheFromTyp()">
+          <span class="step-opt-icon">📚</span>
+          <div><div class="step-opt-label">Reihe planen</div><div class="step-opt-sub">Erst grobe Stunden-Outline, jede Stunde später einzeln ausplanen</div></div>
+        </div>
       </div>`;
     },
     canNext(s){return !!s.typ;}
@@ -819,8 +823,13 @@ function mkStunde(titel){return {id:"st"+Date.now()+Math.random().toString(36).s
 
 function newReihe(){
   const id="r"+Date.now();
-  reihen.push({id,name:"Neue Reihe",fach:null,jgst:null,stunden:[mkStunde("")]});
+  reihen.push({id,name:"Neue Reihe",fach:null,jgst:null,lgFr:"",stunden:[mkStunde("")]});
   switchReihe(id);
+}
+
+// Einstiegspunkt direkt von Schritt 1 des Einzelstunden-Assistenten aus.
+function startReiheFromTyp(){
+  newReihe();
 }
 
 function switchReihe(id){
@@ -891,6 +900,7 @@ function planReiheStunde(idx){
   const s=mkSessionObj(id);
   s.name=st.titel||("Stunde "+(idx+1));
   s.fach=r.fach; s.jgst=r.jgst; s.klp=r.klp||KLP[r.fach]||"";
+  s.lgFr=r.lgFr||"";
   s.reiheCtx={reiheId:r.id,name:r.name,position:idx+1,total:r.stunden.length,prevTitel:r.stunden[idx-1]?r.stunden[idx-1].titel:"",nextTitel:r.stunden[idx+1]?r.stunden[idx+1].titel:""};
   sessions.push(s);
   st.planungId=id;
@@ -932,8 +942,11 @@ function renderReiheEditor(){
             <div class="fc-emoji">${d.emoji}</div><div class="fc-name">${f}</div>
           </div>`).join("")}</div>
         <div class="s-label" style="margin-bottom:.5rem;">Jahrgangsstufe</div>
-        <div class="jgst-grid" style="margin-bottom:.5rem;">${["5","6","7","8","9","10","EF","Q1","Q2"].map(j=>
+        <div class="jgst-grid" style="margin-bottom:1rem;">${["5","6","7","8","9","10","EF","Q1","Q2"].map(j=>
           `<div class="jg-chip ${r.jgst===j?'sel':''}" onclick="reiheSetJg('${j}',this)">${j}</div>`).join("")}</div>
+        <div class="s-label" style="margin-bottom:.3rem;">Lerngruppe (kurz)</div>
+        <textarea class="step-textarea" rows="2" placeholder="z.B. 24 SuS, leistungsheterogen, 2 SuS mit Förderbedarf…" style="margin-bottom:0;" onblur="renameReiheField('lgFr',this.value.trim())">${esc(r.lgFr||"")}</textarea>
+        <div style="font-size:.68rem;color:var(--text3);margin-top:.3rem;">Wird beim Ausplanen automatisch in jede Stunde übernommen.</div>
       </div>
     </div>
     <div class="res-card fu">
