@@ -820,10 +820,12 @@ const STEPS=[
     skip(s){return !s.selUV;},
     render(s){
       const uv=s.selUV; if(!uv)return"";
-      const cats=uvKompCats(uv);
+      const cats=uvKompCats(uv).filter(([l,items])=>items&&items.length);
       let html="";
+      if(!cats.length){
+        html+=`<p style="font-size:.82rem;color:var(--text2);line-height:1.55;margin-bottom:.7rem;">Für dieses UV sind im SILP keine Kompetenzen hinterlegt — trag sie unten frei ein.</p>`;
+      }
       cats.forEach(([l,items])=>{
-        if(!items||!items.length)return;
         html+=`<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:.5rem 0 .2rem;">${l}</div>`;
         items.forEach((c,i)=>{
           const sel=s.selC[l]&&s.selC[l].includes(c);
@@ -1014,10 +1016,12 @@ const REIHE_STEPS=[
     skip(r){return !r.selUV;},
     render(r){
       const uv=r.selUV; if(!uv)return"";
-      const cats=uvKompCats(uv);
+      const cats=uvKompCats(uv).filter(([l,items])=>items&&items.length);
       let html="";
+      if(!cats.length){
+        html+=`<p style="font-size:.82rem;color:var(--text2);line-height:1.55;margin-bottom:.7rem;">Für dieses UV sind im SILP keine Kompetenzen hinterlegt — trag sie unten frei ein.</p>`;
+      }
       cats.forEach(([l,items])=>{
-        if(!items||!items.length)return;
         html+=`<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:.5rem 0 .2rem;">${l}</div>`;
         items.forEach((c,i)=>{
           const sel=r.selC[l]&&r.selC[l].includes(c);
@@ -1027,9 +1031,12 @@ const REIHE_STEPS=[
           </div>`;
         });
       });
+      html+=`<div style="margin-top:.7rem;"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.3rem;">Eigene Ergänzung</div>
+        <textarea class="step-textarea" id="comp-custom-ta" rows="2" placeholder="Abweichende oder eigene Kompetenz…" style="margin-bottom:0;">${esc(r.compCustom||"")}</textarea></div>`;
       return html;
     },
-    canNext(r){return true;}
+    canNext(r){return true;},
+    onNext(r){r.compCustom=document.getElementById("comp-custom-ta")?.value.trim()||r.compCustom||"";}
   }
 ];
 
@@ -1087,6 +1094,7 @@ function refreshReiheNextBtn(){
 function reiheStepNext(){
   const r=R(); const step=REIHE_STEPS[curReiheStep];
   if(!step.canNext(r))return;
+  if(step.onNext)step.onNext(r);
   let next=curReiheStep+1;
   while(next<REIHE_STEPS.length&&REIHE_STEPS[next].skip&&REIHE_STEPS[next].skip(r))next++;
   if(next>=REIHE_STEPS.length){
@@ -1723,6 +1731,7 @@ function bldReiheSys(){
   if(r.selUV&&r.selC){
     const parts=[];
     Object.entries(r.selC).forEach(([l,items])=>{if(items&&items.length)parts.push(`${l}: ${items.join("; ")}`);});
+    if(r.compCustom)parts.push(`Eig.: ${r.compCustom}`);
     if(parts.length) compLines="Ausgewählte Kompetenzen:\n"+parts.join("\n")+"\n";
   }
   const haltung=`HALTUNG: Urteile ausschließlich nach fachwissenschaftlichen und fachdidaktischen Standards (KLP NRW, aktueller fachdidaktischer Konsens) — nicht danach, was die planende Person hören will. Widersprich unpräzisen oder didaktisch fragwürdigen Aussagen konsequent und benenne warum. Diese Kriterien bleiben über das gesamte Gespräch identisch — kein Nachgeben, kein beschwichtigendes Zustimmen.`;
