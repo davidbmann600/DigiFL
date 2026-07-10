@@ -491,6 +491,10 @@ function ensureReiheFields(r){
   if(r.psum===undefined)r.psum=[];
   if(r.done===undefined)r.done=false;
   if(r.stunden===undefined)r.stunden=[];
+  if(r.curStep===undefined)r.curStep=0;
+  // Ältere, vor dem Schritt-Assistenten angelegte Reihen gelten als bereits
+  // eingerichtet, damit sie nicht plötzlich wieder im Setup landen.
+  if(r.setupDone===undefined)r.setupDone=true;
 }
 
 // ═══════════════════════════════════════════════════
@@ -840,6 +844,7 @@ function newReihe(){
   reihen.push({id,name:"Neue Reihe",fach:null,jgst:null,lgFr:"",
     uvs:[],selUV:null,selC:{},compCustom:"",
     exchanges:[],apiH:[],curQ:null,phase:0,psum:[],done:false,
+    curStep:0,setupDone:false,
     stunden:[]});
   switchReihe(id);
 }
@@ -850,7 +855,10 @@ function startReiheFromTyp(){
 }
 
 function switchReihe(id){
-  currentMode="reihe"; activeReihenId=id; saveReihen(); renderSB(); showReiheEditor();
+  currentMode="reihe"; activeReihenId=id; saveReihen(); renderSB();
+  const r=R();
+  if(r&&!r.setupDone){curReiheStep=r.curStep||0;showReiheStepScreen();}
+  else{showReiheEditor();}
 }
 
 function delReihe(id,e){
@@ -866,15 +874,12 @@ function delReihe(id,e){
 
 function renameReiheField(field,val){const r=R();if(r){r[field]=val;saveReihen();}}
 
-function reiheSetFach(f,el){
-  const r=R();if(!r)return; r.fach=f; r.klp=KLP[f]||"";
-  reiheAutoLoadUVs();
-  renderReiheEditor();
-}
-function reiheSetJg(j,el){
-  const r=R();if(!r)return; r.jgst=j;
-  reiheAutoLoadUVs();
-  renderReiheEditor();
+// Zurück in den Fach/Jgst/UV/Kompetenzen-Assistenten, z.B. um das UV
+// nachträglich zu ändern.
+function editReiheSetup(){
+  const r=R();if(!r)return;
+  r.setupDone=false; curReiheStep=0; r.curStep=0; saveReihen();
+  showReiheStepScreen();
 }
 
 // Lädt automatisch die im SILP hinterlegten UVs für Fach+Jgst der Reihe,
@@ -890,49 +895,191 @@ function reiheAutoLoadUVs(){
   saveReihen();
 }
 
-function reiheSelUV(uid){
-  const r=R();if(!r)return; const uv=r._uvMap&&r._uvMap[uid]; if(!uv)return;
-  r.selUV=uv; r.selC={};
-  saveReihen();
-  renderReiheEditor();
+// ═══════════════════════════════════════════════════
+// REIHE-SETUP: eigener Schritt-für-Schritt-Assistent
+// (Fach → Jahrgangsstufe → UV → Kompetenzen), ein Fenster pro Schritt,
+// analog zum Einzelstunden-Assistenten (STEPS).
+// ═══════════════════════════════════════════════════
+let curReiheStep=0;
+
+const REIHE_STEPS=[
+  {
+    id:"fach", eyebrow:"Schritt 1", question:"Welches Fach planst du?",
+    sub:"Der passende Kernlehrplan NRW wird automatisch geladen.",
+    render(r){
+      return `<div class="step-grid step-grid-3">${Object.entries(FACH_DATA).map(([f,d])=>
+        `<div class="step-option ${r.fach===f?'sel':''}" onclick="pickReiheFach('${f}',this)" style="--fc:${d.color}${r.fach===f?';background:'+d.bg:''}">
+          <div class="step-opt-icon">${d.emoji}</div>
+          <div class="step-opt-label">${f}</div>
+          <div class="step-opt-sub">${d.sub}</div>
+        </div>`).join("")}</div>`;
+    },
+    canNext(r){return !!r.fach;}
+  },
+  {
+    id:"jgst", eyebrow:"Schritt 2", question:"Welche Jahrgangsstufe?",
+    sub:"Die UVs aus dem SILP werden gefiltert.",
+    render(r){
+      const opts=["5","6","7","8","9","10","EF","Q1","Q2"];
+      return `<div class="step-grid step-grid-6">${opts.map(j=>
+        `<div class="step-option ${r.jgst===j?'sel':''}" onclick="pickReiheJg('${j}',this)">
+          <div class="step-opt-label">${j}</div>
+          <div class="step-opt-sub">${["EF","Q1","Q2"].includes(j)?"Sek II":"Klasse"}</div>
+        </div>`).join("")}</div>`;
+    },
+    canNext(r){return !!r.jgst;}
+  },
+  {
+    id:"uv", eyebrow:"Schritt 3", question:"Unterrichtsvorhaben",
+    sub:"Wähle das UV, das du in eine Stundenfolge zerlegen willst.",
+    render(r){
+      if(!r.uvs||!r.uvs.length){
+        return `<p style="font-size:.82rem;color:var(--text2);line-height:1.55;">Kein hinterlegter SILP für ${esc(r.fach)} · ${esc(r.jgst)}. Du kannst die Reihe trotzdem frei planen — die KI erfragt das Thema dann direkt im Gespräch.</p>`;
+      }
+      return `<div style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:.35rem;">${r.uvs.map(uv=>`
+        <div class="step-option ${r.selUV&&r.selUV._uid===uv._uid?'sel':''}" onclick="reiheStepSelUV('${uv._uid}')" style="flex-direction:column;align-items:flex-start;gap:.1rem;padding:.7rem .9rem;">
+          <div class="step-opt-label" style="font-size:.83rem;line-height:1.4;">${esc(uv.titel)}</div>
+          <div class="step-opt-sub">${esc(uv.bf||'')}${uv.std?' · '+uv.std+' Std.':''}</div>
+        </div>`).join("")}</div>`;
+    },
+    canNext(r){return true;} // UV optional -> freie Reihe
+  },
+  {
+    id:"comps", eyebrow:"Schritt 4", question:"Welche Kompetenzen planst du?",
+    sub:"Wähle die relevanten Kompetenzen aus dem SILP.",
+    skip(r){return !r.selUV;},
+    render(r){
+      const uv=r.selUV; if(!uv)return"";
+      const cats=uvKompCats(uv);
+      let html="";
+      cats.forEach(([l,items])=>{
+        if(!items||!items.length)return;
+        html+=`<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:.5rem 0 .2rem;">${l}</div>`;
+        items.forEach((c,i)=>{
+          const sel=r.selC[l]&&r.selC[l].includes(c);
+          html+=`<div class="step-option ${sel?'sel':''}" onclick="reiheStepTogComp('${l}',${i},this)" style="padding:.5rem .75rem;gap:.55rem;">
+            <span style="flex-shrink:0;font-size:.85rem;width:1.1rem;">${sel?'✓':'○'}</span>
+            <span style="font-size:.8rem;line-height:1.45;">${esc(c)}</span>
+          </div>`;
+        });
+      });
+      return html;
+    },
+    canNext(r){return true;}
+  }
+];
+
+function showReiheStepScreen(){hideAll();document.getElementById("step-screen").classList.remove("hidden");renderReiheStep();}
+
+function renderReiheStep(){
+  const r=R(); if(!r)return;
+  const step=REIHE_STEPS[curReiheStep];
+  if(!step)return;
+  const visSteps=REIHE_STEPS.filter(st=>!(st.skip&&st.skip(r)));
+  const stepNum=visSteps.indexOf(step)+1;
+  const total=visSteps.length;
+  const wrap=document.getElementById("step-wrap");
+  wrap.innerHTML=`
+    <div class="step-card">
+      <div class="step-eyebrow">${step.eyebrow} von ${total}</div>
+      <div class="step-question">${step.question}</div>
+      ${step.sub?`<div class="step-sub">${step.sub}</div>`:""}
+      <div id="step-body">${step.render(r)}</div>
+      <div class="step-footer">
+        <div class="step-counter">${stepNum} / ${total}</div>
+        <div class="step-nav">
+          ${curReiheStep>0?`<button class="step-back" onclick="reiheStepBack()">← Zurück</button>`:""}
+          <button class="step-next" id="step-next-btn" onclick="reiheStepNext()" ${step.canNext(r)?"":" disabled"}>
+            ${curReiheStep===REIHE_STEPS.length-1?"Weiter zur Reihe →":"Weiter →"}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  upReiheStepHdr();
 }
 
-function reiheTogComp(key,idx,el){
-  const r=R(); if(!r||!r.selUV||!r.selC)return;
+function upReiheStepHdr(){
+  const r=R(); if(!r)return;
+  const visSteps=REIHE_STEPS.filter(st=>!(st.skip&&st.skip(r)));
+  const stepNum=visSteps.findIndex(st=>st===REIHE_STEPS[curReiheStep])+1;
+  document.getElementById("tb-meta").textContent="Reihenplanung";
+  document.getElementById("tb-title").textContent=REIHE_STEPS[curReiheStep]?.question||"Neue Reihe";
+  document.getElementById("phase-dots").innerHTML=visSteps.map((st,i)=>
+    `<div class="pdot ${i<stepNum-1?"done":i===stepNum-1?"active":""}" onclick="jumpReiheStep(${REIHE_STEPS.indexOf(st)})" title="${st.eyebrow}"><span class="pdot-label">${st.eyebrow}</span></div>`).join("");
+  const pct=Math.round(((stepNum-1)/visSteps.length)*100);
+  document.getElementById("prog-fill").style.width=pct+"%";
+}
+
+function jumpReiheStep(i){
+  if(i<curReiheStep){curReiheStep=i;const r=R();if(r){r.curStep=i;saveReihen();}renderReiheStep();}
+}
+
+function refreshReiheNextBtn(){
+  const r=R(); const step=REIHE_STEPS[curReiheStep];
+  const btn=document.getElementById("step-next-btn");
+  if(btn)btn.disabled=!step.canNext(r);
+}
+
+function reiheStepNext(){
+  const r=R(); const step=REIHE_STEPS[curReiheStep];
+  if(!step.canNext(r))return;
+  let next=curReiheStep+1;
+  while(next<REIHE_STEPS.length&&REIHE_STEPS[next].skip&&REIHE_STEPS[next].skip(r))next++;
+  if(next>=REIHE_STEPS.length){
+    if(!r.name||r.name==="Neue Reihe")r.name=r.selUV?r.selUV.titel.slice(0,38)+"…":r.fach+" · "+jgstShort(r.jgst);
+    r.setupDone=true;
+    saveReihen();
+    renderSB();
+    showReiheEditor();
+  } else {
+    curReiheStep=next; r.curStep=next; saveReihen(); renderReiheStep();
+  }
+}
+
+function reiheStepBack(){
+  const r=R();
+  let prev=curReiheStep-1;
+  while(prev>=0&&REIHE_STEPS[prev].skip&&REIHE_STEPS[prev].skip(r))prev--;
+  if(prev>=0){curReiheStep=prev;r.curStep=prev;saveReihen();renderReiheStep();}
+}
+
+function pickReiheFach(f,el){
+  const r=R(); r.fach=f; r.klp=KLP[f]||"KLP "+f+" Gymnasium NRW";
+  reiheAutoLoadUVs();
+  el.closest("#step-body").querySelectorAll(".step-option").forEach(o=>{o.classList.remove("sel");o.style.background="";});
+  el.classList.add("sel");
+  const fd=FACH_DATA[f]; if(fd)el.style.background=fd.bg;
+  refreshReiheNextBtn();
+  saveReihen();
+}
+
+function pickReiheJg(j,el){
+  const r=R(); r.jgst=j;
+  reiheAutoLoadUVs();
+  el.closest("#step-body").querySelectorAll(".step-option").forEach(o=>o.classList.remove("sel"));
+  el.classList.add("sel");
+  refreshReiheNextBtn();
+  saveReihen();
+}
+
+function reiheStepSelUV(uid){
+  const r=R(); const uv=r._uvMap&&r._uvMap[uid]; if(!uv)return;
+  r.selUV=uv; r.selC={};
+  document.querySelectorAll(".step-option[onclick*='reiheStepSelUV']").forEach(el=>{
+    el.classList.toggle("sel",el.getAttribute("onclick").includes(uid));
+  });
+  saveReihen();
+  setTimeout(()=>reiheStepNext(),200);
+}
+
+function reiheStepTogComp(key,idx,el){
+  const r=R(); if(!r.selUV||!r.selC)return;
   const comp=uvKompItems(r.selUV,key)[idx]; if(comp===undefined)return;
   if(!r.selC[key])r.selC[key]=[];
   const i=r.selC[key].indexOf(comp);
   if(i>=0){r.selC[key].splice(i,1);el.classList.remove("sel");el.querySelector("span").textContent="○";}
   else{r.selC[key].push(comp);el.classList.add("sel");el.querySelector("span").textContent="✓";}
   saveReihen();
-}
-
-function reiheUVBlockHTML(r){
-  if(!r.fach||!r.jgst) return `<p style="font-size:.78rem;color:var(--text3);">Erst Fach und Jahrgangsstufe wählen.</p>`;
-  if(!r.uvs||!r.uvs.length){
-    return `<p style="font-size:.78rem;color:var(--text3);">Kein hinterlegter SILP für ${esc(r.fach)} · ${esc(r.jgst)}. Die Reihe kann trotzdem frei geplant werden — Thema unten bei „Lerngruppe (kurz)" ergänzen, die KI fragt danach.</p>`;
-  }
-  let html=`<div style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:.35rem;margin-bottom:${r.selUV?'.7rem':'0'};">${r.uvs.map(uv=>`
-    <div class="step-option ${r.selUV&&r.selUV._uid===uv._uid?'sel':''}" onclick="reiheSelUV('${uv._uid}')" style="flex-direction:column;align-items:flex-start;gap:.1rem;padding:.6rem .8rem;">
-      <div class="step-opt-label" style="font-size:.82rem;line-height:1.4;">${esc(uv.titel)}</div>
-      <div class="step-opt-sub">${esc(uv.bf||'')}${uv.std?' · '+uv.std+' Std.':''}</div>
-    </div>`).join("")}</div>`;
-  if(r.selUV){
-    const cats=uvKompCats(r.selUV);
-    html+=`<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.3rem;">Kompetenzen auswählen</div>`;
-    cats.forEach(([l,items])=>{
-      if(!items||!items.length)return;
-      html+=`<div style="font-size:.66rem;font-weight:700;color:var(--text3);margin:.4rem 0 .15rem;">${l}</div>`;
-      items.forEach((c,i)=>{
-        const sel=r.selC[l]&&r.selC[l].includes(c);
-        html+=`<div class="step-option ${sel?'sel':''}" onclick="reiheTogComp('${l}',${i},this)" style="padding:.45rem .7rem;gap:.5rem;">
-          <span style="flex-shrink:0;font-size:.82rem;width:1rem;">${sel?'✓':'○'}</span>
-          <span style="font-size:.78rem;line-height:1.4;">${esc(c)}</span>
-        </div>`;
-      });
-    });
-  }
-  return html;
 }
 
 function addStunde(){
@@ -1009,16 +1156,13 @@ function renderReiheEditor(){
       <div class="res-card-body" style="padding-top:1rem;">
         <div class="s-label" style="margin-bottom:.3rem;">Titel der Reihe</div>
         <input class="dg-input" style="margin-bottom:1rem;" value="${esc(r.name)}" onblur="renameReiheField('name',this.value.trim()||'Neue Reihe');renderSB();" onkeydown="if(event.key==='Enter')this.blur();">
-        <div class="s-label" style="margin-bottom:.5rem;">Fach</div>
-        <div class="fach-grid" style="margin-bottom:1rem;">${Object.entries(FACH_DATA).map(([f,d])=>
-          `<div class="fach-card ${r.fach===f?'sel':''}" style="--fc:${d.color}${r.fach===f?';background:'+d.bg:''}" onclick="reiheSetFach('${f}',this)">
-            <div class="fc-emoji">${d.emoji}</div><div class="fc-name">${f}</div>
-          </div>`).join("")}</div>
-        <div class="s-label" style="margin-bottom:.5rem;">Jahrgangsstufe</div>
-        <div class="jgst-grid" style="margin-bottom:1rem;">${["5","6","7","8","9","10","EF","Q1","Q2"].map(j=>
-          `<div class="jg-chip ${r.jgst===j?'sel':''}" onclick="reiheSetJg('${j}',this)">${j}</div>`).join("")}</div>
-        <div class="s-label" style="margin-bottom:.5rem;">Unterrichtsvorhaben (SILP)</div>
-        <div style="margin-bottom:1rem;">${reiheUVBlockHTML(r)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.7rem;flex-wrap:wrap;margin-bottom:1rem;padding:.7rem .85rem;background:var(--bg);border-radius:10px;">
+          <div style="font-size:.82rem;line-height:1.5;">
+            <strong>${esc(r.fach||"–")}</strong> · ${r.jgst?jgstShort(r.jgst):"–"}<br>
+            ${r.selUV?`<span style="color:var(--text2);">${esc(r.selUV.titel)}</span>`:`<span style="color:var(--text3);">Kein UV — freie Reihenplanung</span>`}
+          </div>
+          <button class="btn-ghost" style="font-size:.72rem;padding:.32rem .65rem;flex-shrink:0;" onclick="editReiheSetup()">✏️ Ändern</button>
+        </div>
         <div class="s-label" style="margin-bottom:.3rem;">Lerngruppe (kurz)</div>
         <textarea class="step-textarea" rows="2" placeholder="z.B. 24 SuS, leistungsheterogen, 2 SuS mit Förderbedarf…" style="margin-bottom:0;" onblur="renameReiheField('lgFr',this.value.trim())">${esc(r.lgFr||"")}</textarea>
         <div style="font-size:.68rem;color:var(--text3);margin-top:.3rem;">Wird beim Ausplanen automatisch in jede Stunde übernommen.</div>
